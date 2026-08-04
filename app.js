@@ -228,14 +228,16 @@
 
     const segEls = {};
     const segLabels = {};
-    const legendPcts = {};
+    const labelCells = {};
+    const labelPcts = {};
 
     function refreshPcts() {
       const p = displayPercents();
       state.activities.forEach(a => {
         segEls[a.id].style.flexGrow = a.targetPercent;
+        labelCells[a.id].style.flexGrow = a.targetPercent;
         segLabels[a.id].textContent = `${p[a.id]}%`;
-        legendPcts[a.id].textContent = `${p[a.id]}%`;
+        labelPcts[a.id].textContent = `${p[a.id]}%`;
       });
       fitSegLabels();
     }
@@ -324,41 +326,45 @@
 
     activityList.appendChild(bar);
 
-    const legend = document.createElement('div');
-    legend.className = 'alloc-legend';
-    state.activities.forEach(act => {
-      const chip = document.createElement('span');
-      chip.className = 'legend-chip';
+    // Labels sit in a second flex row that mirrors the bar's segment
+    // widths, so each activity's name stays directly under its segment.
+    const labels = document.createElement('div');
+    labels.className = 'alloc-labels';
+    state.activities.forEach((act, i) => {
+      if (i > 0) {
+        const spacer = document.createElement('div');
+        spacer.className = 'alloc-label-spacer';
+        labels.appendChild(spacer);
+      }
 
-      const sw = document.createElement('span');
-      sw.className = 'swatch';
-      sw.style.background = colorOf(act);
+      const cell = document.createElement('div');
+      cell.className = 'alloc-label-cell';
+      cell.style.flexGrow = act.targetPercent;
 
-      const name = document.createElement('span');
-      name.className = 'legend-name';
+      const name = document.createElement('button');
+      name.type = 'button';
+      name.className = 'alloc-label-name';
       name.textContent = act.name;
-      name.title = act.name;
+      name.title = `${act.name} — click to rename`;
+      name.addEventListener('click', () => editActivity(act));
 
+      const meta = document.createElement('span');
+      meta.className = 'alloc-label-meta';
       const pct = document.createElement('span');
-      pct.className = 'legend-pct';
-      legendPcts[act.id] = pct;
-
-      const edit = document.createElement('button');
-      edit.className = 'icon-btn';
-      edit.title = 'Rename';
-      edit.textContent = '✏️';
-      edit.addEventListener('click', () => editActivity(act));
+      labelPcts[act.id] = pct;
 
       const del = document.createElement('button');
       del.className = 'icon-btn danger';
-      del.title = 'Delete';
+      del.title = `Delete ${act.name}`;
       del.textContent = '✕';
       del.addEventListener('click', () => deleteActivity(act));
 
-      chip.append(sw, name, pct, edit, del);
-      legend.appendChild(chip);
+      meta.append(pct, del);
+      cell.append(name, meta);
+      labelCells[act.id] = cell;
+      labels.appendChild(cell);
     });
-    activityList.appendChild(legend);
+    activityList.appendChild(labels);
 
     requestAnimationFrame(refreshPcts);
 

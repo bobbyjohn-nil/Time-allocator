@@ -253,7 +253,6 @@ select, input[type="text"], input[type="number"] {
   height: 40px;
   border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 14px;
 }
 
 .alloc-seg {
@@ -291,21 +290,48 @@ select, input[type="text"], input[type="number"] {
   background: var(--baseline);
 }
 
-.alloc-legend { display: flex; flex-wrap: wrap; gap: 8px; }
+.alloc-labels { display: flex; margin-top: 6px; }
 
-.legend-chip {
-  display: inline-flex;
+.alloc-label-cell {
+  flex-basis: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px 4px 10px;
-  border: 1px solid var(--gridline);
-  border-radius: 999px;
-  font-size: 0.9rem;
+  gap: 2px;
+  text-align: center;
+  overflow: hidden;
+  transition: flex-grow 0.06s linear;
 }
 
-.legend-name { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alloc-label-spacer { flex: 0 0 12px; }
 
-.legend-pct { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.alloc-label-name {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-primary);
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alloc-label-name:hover { text-decoration: underline; }
+
+.alloc-label-meta {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  max-width: 100%;
+}
 
 .icon-btn {
   font: inherit;

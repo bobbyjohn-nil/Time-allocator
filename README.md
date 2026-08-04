@@ -1,4 +1,4 @@
-# ⏳ Time Allocator
+# ⧗ Time Allocator
 
 A small website that helps you spend your free time the way you *meant* to.
 
