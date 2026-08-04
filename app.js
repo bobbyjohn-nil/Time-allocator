@@ -12,6 +12,7 @@
 
   let state = load();
   let range = 'week'; // 'week' | '7d' | 'all'
+  let mode = 'unknown'; // 'unknown' | 'fixed'
   let timerInterval = null;
 
   function load() {
@@ -195,6 +196,51 @@
     };
   }
 
+  // Split X available minutes across activities so everyone ends as close
+  // to target as possible: waterfill toward the level where each active
+  // activity's total equals targetShare × (tracked + X), most-behind first.
+  function planAllocation(X) {
+    const { stats } = computeStats();
+    let active = stats.filter(s => s.targetShare > 0);
+    if (!active.length) return [];
+    for (let guard = 0; guard < stats.length + 2; guard++) {
+      const sumT = active.reduce((a, s) => a + s.targetShare, 0);
+      const sumS = active.reduce((a, s) => a + s.spent, 0);
+      const lambda = (X + sumS) / sumT;
+      const next = active.filter(s => s.targetShare * lambda > s.spent + 1e-9);
+      if (next.length === active.length) {
+        return finalizePlan(active.map(s => ({ stat: s, minutes: s.targetShare * lambda - s.spent })), X);
+      }
+      active = next;
+      if (!active.length) break;
+    }
+    const sumT = stats.reduce((a, s) => a + s.targetShare, 0) || 1;
+    return finalizePlan(stats.map(s => ({ stat: s, minutes: X * s.targetShare / sumT })), X);
+  }
+
+  // Round a raw allocation to whole minutes summing exactly to X, ordered
+  // most-behind first, folding sub-10-minute slivers into the biggest block.
+  function finalizePlan(alloc, X) {
+    alloc.sort((a, b) => b.minutes - a.minutes);
+    const floors = alloc.map(a => Math.floor(a.minutes));
+    let left = X - floors.reduce((a, b) => a + b, 0);
+    const order = alloc.map((a, i) => ({ i, frac: a.minutes - floors[i] })).sort((p, q) => q.frac - p.frac);
+    for (const o of order) {
+      if (left <= 0) break;
+      floors[o.i] += 1;
+      left -= 1;
+    }
+    let blocks = alloc.map((a, i) => ({ activity: a.stat.activity, minutes: floors[i] })).filter(b => b.minutes > 0);
+    if (blocks.length > 1) {
+      const keep = blocks.filter(b => b.minutes >= 10);
+      if (keep.length && keep.length < blocks.length) {
+        keep[0].minutes += blocks.filter(b => b.minutes < 10).reduce((a, b) => a + b.minutes, 0);
+        blocks = keep;
+      }
+    }
+    return blocks;
+  }
+
   // How long to work on it so its share reaches the target:
   // solve (spent + x) / (total + x) = targetShare  →  x = deficit / (1 − targetShare).
   function suggestMinutes(stat, totalMins) {
@@ -213,6 +259,10 @@
   const $ = id => document.getElementById(id);
   const askBtn = $('ask-btn');
   const recBox = $('recommendation');
+  const fixedControls = $('fixed-controls');
+  const haveHours = $('have-hours');
+  const haveMins = $('have-mins');
+  const splitToggle = $('split-toggle');
   const activityList = $('activity-list');
   const targetTotal = $('target-total');
   const activityForm = $('activity-form');
@@ -591,15 +641,149 @@
   }
 
   function renderRecommendation() {
-    const rec = recommend();
     recBox.classList.remove('hidden');
     recBox.innerHTML = '';
 
-    if (!rec) {
+    if (state.activities.length === 0) {
       recBox.innerHTML = `<p class="rec-reason">Add some activities first, then ask again!</p>`;
       return;
     }
 
+    if (mode === 'fixed') {
+      renderFixedRecommendation();
+    } else {
+      renderOpenRecommendation();
+    }
+  }
+
+  function fixedMinutes() {
+    const h = parseInt(haveHours.value, 10) || 0;
+    const m = parseInt(haveMins.value, 10) || 0;
+    return Math.min(h * 60 + m, 24 * 60);
+  }
+
+  function renderFixedRecommendation() {
+    const X = fixedMinutes();
+    if (X < 5) {
+      recBox.innerHTML = `<p class="rec-reason">Enter at least 5 minutes and ask again.</p>`;
+      return;
+    }
+
+    if (!splitToggle.checked) {
+      const rec = recommend();
+      const act = rec.activity;
+      const { totalMins } = computeStats();
+
+      const headline = document.createElement('div');
+      headline.className = 'rec-headline';
+      const sw = document.createElement('span');
+      sw.className = 'rec-swatch';
+      sw.style.background = colorOf(act);
+      headline.append(sw, document.createTextNode(act.name));
+
+      const reason = document.createElement('p');
+      reason.className = 'rec-reason';
+      if (totalMins === 0) {
+        reason.textContent = `Spend your ${fmtDuration(X)} here — nothing is tracked yet, so start with your biggest priority.`;
+      } else {
+        const actualPct = Math.round(rec.actualShare * 100);
+        const targetPct = displayPercents()[act.id];
+        reason.textContent = actualPct < targetPct
+          ? `Spend the whole ${fmtDuration(X)} on this — you're at ${actualPct}% of a ${targetPct}% target, the furthest behind.`
+          : `Everything is at or above target — this one benefits most from your ${fmtDuration(X)}.`;
+      }
+
+      const actions = document.createElement('div');
+      actions.className = 'rec-actions';
+      actions.append(
+        makeStartTimerButton(act),
+        makeLogButton([{ activity: act, minutes: X }], `Log ${fmtDuration(X)} now`)
+      );
+
+      recBox.append(headline, reason, actions);
+      return;
+    }
+
+    const blocks = planAllocation(X);
+    if (!blocks.length) {
+      recBox.innerHTML = `<p class="rec-reason">Couldn't build a plan — check your activities.</p>`;
+      return;
+    }
+
+    const headline = document.createElement('div');
+    headline.className = 'rec-headline';
+    headline.textContent = `Your plan for ${fmtDuration(X)}`;
+
+    const reason = document.createElement('p');
+    reason.className = 'rec-reason';
+    reason.textContent = blocks.length === 1
+      ? 'One activity is far enough behind that it deserves the whole block.'
+      : 'Start with what is furthest behind; the sizes bring everything toward its target.';
+
+    const planBar = document.createElement('div');
+    planBar.className = 'plan-bar';
+    blocks.forEach(b => {
+      const seg = document.createElement('div');
+      seg.style.flexGrow = b.minutes;
+      seg.style.background = colorOf(b.activity);
+      attachTooltip(seg, () => `${b.activity.name} — ${fmtDuration(b.minutes)}`);
+      planBar.appendChild(seg);
+    });
+
+    const list = document.createElement('ol');
+    list.className = 'plan-list';
+    blocks.forEach(b => {
+      const li = document.createElement('li');
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = colorOf(b.activity);
+      const name = document.createElement('span');
+      name.className = 'plan-name';
+      name.textContent = b.activity.name;
+      const mins = document.createElement('span');
+      mins.className = 'plan-mins';
+      mins.textContent = fmtDuration(b.minutes);
+      li.append(sw, name, mins);
+      list.appendChild(li);
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'rec-actions';
+    actions.append(
+      makeStartTimerButton(blocks[0].activity, `Start timer on ${blocks[0].activity.name}`),
+      makeLogButton(blocks, 'Log the whole plan')
+    );
+
+    recBox.append(headline, reason, planBar, list, actions);
+  }
+
+  function makeStartTimerButton(act, label) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-primary';
+    btn.textContent = label || 'Start timer';
+    btn.addEventListener('click', () => {
+      timerActivity.value = act.id;
+      startTimer();
+      $('timer-section').scrollIntoView({ behavior: 'smooth' });
+    });
+    return btn;
+  }
+
+  function makeLogButton(blocks, label) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-ghost';
+    btn.textContent = label;
+    btn.addEventListener('click', () => {
+      blocks.forEach(b => addSession(b.activity.id, b.minutes));
+      const total = blocks.reduce((a, b) => a + b.minutes, 0);
+      showToast(`Logged ${fmtDuration(total)} across ${blocks.length} ${blocks.length === 1 ? 'activity' : 'activities'}`);
+      renderRecommendation();
+    });
+    return btn;
+  }
+
+  function renderOpenRecommendation() {
+    const rec = recommend();
     const { totalMins } = computeStats();
     const act = rec.activity;
 
@@ -835,6 +1019,22 @@
   // ---------- Events ----------
 
   askBtn.addEventListener('click', renderRecommendation);
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      mode = btn.dataset.mode;
+      fixedControls.hidden = mode !== 'fixed';
+      if (!recBox.classList.contains('hidden')) renderRecommendation();
+    });
+  });
+
+  for (const el of [haveHours, haveMins, splitToggle]) {
+    el.addEventListener('input', () => {
+      if (!recBox.classList.contains('hidden')) renderRecommendation();
+    });
+  }
 
   activityForm.addEventListener('submit', e => {
     e.preventDefault();

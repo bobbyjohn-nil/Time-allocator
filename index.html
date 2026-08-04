@@ -17,6 +17,21 @@
     <!-- ============ RECOMMENDATION ============ -->
     <section class="card hero-card" id="recommend-section">
       <div class="hero-inner">
+        <div class="mode-toggle" role="group" aria-label="How much time do you have?">
+          <button type="button" class="mode-btn active" data-mode="unknown">Not sure how long</button>
+          <button type="button" class="mode-btn" data-mode="fixed">I have a set time</button>
+        </div>
+        <div id="fixed-controls" class="fixed-controls" hidden>
+          <label class="time-input">
+            <input type="number" id="have-hours" min="0" max="24" step="1" value="1" aria-label="Hours available"> h
+          </label>
+          <label class="time-input">
+            <input type="number" id="have-mins" min="0" max="59" step="5" value="0" aria-label="Minutes available"> m
+          </label>
+          <label class="split-toggle">
+            <input type="checkbox" id="split-toggle"> Break it into segments
+          </label>
+        </div>
         <button id="ask-btn" class="btn btn-hero">What should I do?</button>
         <div id="recommendation" class="recommendation hidden" aria-live="polite"></div>
       </div>

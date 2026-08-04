@@ -22,8 +22,12 @@ percentages you chose.
   (+15m/+30m/+1h/+2h) or a custom number of minutes.
 - **Recommendations** — for each activity the site computes its *deficit*:
   `target share × total tracked time − time spent on it`. The activity with
-  the biggest deficit is what you should do next. The suggested duration is
-  how long it takes for that activity's share to reach its target.
+  the biggest deficit is what you should do next. Two modes: **"Not sure
+  how long"** suggests one activity plus how long it takes to reach its
+  target, while **"I have a set time"** takes your available hours/minutes
+  and either points the whole block at the most-behind activity or — with
+  "Break it into segments" on — splits it into a small plan of blocks sized
+  to pull every activity toward its target.
 - **Balance view** — a bar per activity shows the share of tracked time it
   actually got, with a tick marking its target, over this week, the last
   7 days, or all time.

@@ -130,6 +130,72 @@ h2 { margin: 0 0 12px; font-size: 1.1rem; }
 .hero-inner { display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .hidden { display: none; }
 
+.mode-toggle { display: flex; gap: 4px; }
+
+.mode-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.mode-btn.active {
+  background: var(--track);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.fixed-controls {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.time-input { display: flex; align-items: center; gap: 6px; }
+.time-input input { width: 64px; }
+
+.split-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.plan-bar {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.plan-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.plan-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--gridline);
+}
+
+.plan-list li:last-child { border-bottom: none; }
+.plan-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-mins { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
 .recommendation { width: 100%; max-width: 480px; text-align: left; }
 
 .rec-headline {
