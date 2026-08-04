@@ -37,8 +37,27 @@
   }
 
   // ---------- Target percentages ----------
-  // Targets are stored as floats that always sum to 100; sliders redistribute
-  // the remainder proportionally across the other activities.
+  // Targets are stored as floats that always sum to 100. Changes are spread
+  // evenly across the other activities, never below MIN_SHARE each.
+
+  const MIN_SHARE = 5;
+
+  // Take `amount` total from vals[idxs], as evenly as possible, never
+  // pushing any below `floor`. Mutates vals; returns what was collected.
+  function takeEvenly(vals, idxs, amount, floor) {
+    let remaining = amount;
+    for (let guard = 0; guard < idxs.length + 2 && remaining > 1e-9; guard++) {
+      const movable = idxs.filter(i => vals[i] > floor + 1e-9);
+      if (!movable.length) break;
+      const per = remaining / movable.length;
+      for (const i of movable) {
+        const take = Math.min(per, vals[i] - floor);
+        vals[i] -= take;
+        remaining -= take;
+      }
+    }
+    return amount - remaining;
+  }
 
   function normalizeTargets(activities) {
     if (activities.length === 0) return;
@@ -290,23 +309,48 @@
       });
     }
 
-    // Dragging the divider between two neighbors trades share between
-    // them only; everything else stays put, so the bar stays at 100%.
-    // Each side keeps at least 5% so no activity ever vanishes from the bar.
-    function wireHandle(handle, a, b, bar) {
-      const apply = (aVal, combined) => {
-        const lo = Math.min(5, combined / 2);
-        a.targetPercent = Math.max(lo, Math.min(combined - lo, aVal));
-        b.targetPercent = combined - a.targetPercent;
+    // Dragging the divider after activity `leftIndex` resizes that activity;
+    // the difference is spread evenly over ALL other activities (each kept
+    // above a minimum share), so growing one gently shrinks everything else.
+    // A binary search picks the resize amount that keeps the divider under
+    // the pointer.
+    function wireHandle(handle, leftIndex, bar) {
+      const floor = () => Math.min(MIN_SHARE, 100 / state.activities.length);
+
+      function sharesFor(P0, g) {
+        const vals = P0.slice();
+        const idxs = vals.map((_, i) => i).filter(i => i !== leftIndex);
+        if (g >= 0) {
+          vals[leftIndex] += takeEvenly(vals, idxs, g, floor());
+        } else {
+          const newA = Math.max(floor(), vals[leftIndex] + g);
+          const freed = vals[leftIndex] - newA;
+          vals[leftIndex] = newA;
+          idxs.forEach(i => { vals[i] += freed / idxs.length; });
+        }
+        return vals;
+      }
+
+      const boundaryOf = vals => vals.slice(0, leftIndex + 1).reduce((a, b) => a + b, 0);
+
+      function applyBoundary(P0, target) {
+        let lo = -100, hi = 100;
+        for (let k = 0; k < 40; k++) {
+          const mid = (lo + hi) / 2;
+          if (boundaryOf(sharesFor(P0, mid)) < target) lo = mid; else hi = mid;
+        }
+        const vals = sharesFor(P0, (lo + hi) / 2);
+        state.activities.forEach((a, i) => { a.targetPercent = vals[i]; });
         refreshPcts();
-      };
+      }
+
       handle.addEventListener('pointerdown', e => {
         e.preventDefault();
+        const P0 = state.activities.map(a => a.targetPercent);
+        const b0 = boundaryOf(P0);
         const startX = e.clientX;
-        const aStart = a.targetPercent;
-        const combined = a.targetPercent + b.targetPercent;
         const width = bar.getBoundingClientRect().width;
-        const move = ev => apply(aStart + ((ev.clientX - startX) / width) * 100, combined);
+        const move = ev => applyBoundary(P0, b0 + ((ev.clientX - startX) / width) * 100);
         const up = () => {
           document.removeEventListener('pointermove', move);
           document.removeEventListener('pointerup', up);
@@ -321,7 +365,8 @@
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
         e.preventDefault();
         const step = (e.shiftKey ? 5 : 1) * (e.key === 'ArrowRight' ? 1 : -1);
-        apply(a.targetPercent + step, a.targetPercent + b.targetPercent);
+        const P0 = state.activities.map(a => a.targetPercent);
+        applyBoundary(P0, boundaryOf(P0) + step);
         save();
         renderBalance();
       });
@@ -341,7 +386,7 @@
         const grip = document.createElement('div');
         grip.className = 'alloc-grip';
         handle.appendChild(grip);
-        wireHandle(handle, prev, act, bar);
+        wireHandle(handle, i - 1, bar);
         bar.appendChild(handle);
       }
 
@@ -593,10 +638,19 @@
 
   // ---------- Activity CRUD ----------
 
-  // New activities start with an equal share of everything.
+  // A new activity claims an equal share (100/n), funded evenly by the
+  // existing activities so their relative ratios are preserved.
   function addActivity(name) {
-    state.activities.push({ id: uid(), name, targetPercent: 0, createdAt: Date.now() });
-    state.activities.forEach(a => { a.targetPercent = 100 / state.activities.length; });
+    const n = state.activities.length + 1;
+    const act = { id: uid(), name, targetPercent: 100 / n, createdAt: Date.now() };
+    if (state.activities.length > 0) {
+      const vals = state.activities.map(a => a.targetPercent);
+      const idxs = vals.map((_, i) => i);
+      const floor = Math.min(MIN_SHARE, 100 / n);
+      act.targetPercent = takeEvenly(vals, idxs, 100 / n, floor);
+      state.activities.forEach((a, i) => { a.targetPercent = vals[i]; });
+    }
+    state.activities.push(act);
     save();
     render();
   }

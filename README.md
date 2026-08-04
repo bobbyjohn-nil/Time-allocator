@@ -14,9 +14,9 @@ percentages you chose.
 
 - **Activities** — add each thing you care about. All activities live on a
   single bar that always represents 100% of your free time: the first
-  activity fills the whole bar, each new one rebalances everything to equal
-  shares, and dragging the divider between two activities pushes time from
-  one into the other.
+  activity fills the whole bar, each new one claims an equal share funded
+  evenly by the others, and dragging a divider resizes an activity by
+  spreading the difference evenly across all the rest.
 - **Logging** — track free time with the built-in timer (start when you begin,
   stop when you're done) or log sessions manually with quick chips
   (+15m/+30m/+1h/+2h) or a custom number of minutes.
