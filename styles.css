@@ -158,6 +158,8 @@ h2 { margin: 0 0 12px; font-size: 1.1rem; }
   color: var(--text-secondary);
 }
 
+.fixed-controls[hidden] { display: none; }
+
 .time-input { display: flex; align-items: center; gap: 6px; }
 .time-input input { width: 64px; }
 
