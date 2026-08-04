@@ -267,6 +267,7 @@
       sw.style.background = colorOf(act);
       const label = document.createElement('span');
       label.textContent = act.name;
+      label.title = act.name;
       name.append(sw, label);
 
       const slider = document.createElement('input');

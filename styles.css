@@ -256,16 +256,24 @@ select, input[type="text"], input[type="number"] {
   gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid var(--gridline);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .activity-row:last-child { border-bottom: none; }
-.activity-name { flex: 1 1 130px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+.activity-name {
+  flex: 0 1 160px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 72px;
+}
+
 .activity-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .activity-slider {
-  flex: 2 1 150px;
-  min-width: 120px;
+  flex: 1 1 100px;
+  min-width: 60px;
   height: 20px;
   margin: 0;
   cursor: grab;
