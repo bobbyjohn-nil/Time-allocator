@@ -326,8 +326,12 @@
 
       function applyDelta(P0, locked, d) {
         const vals = P0.slice();
-        const receiver = d >= 0 ? leftIndex : leftIndex + 1;
-        if (locked[receiver]) return vals;
+        // The grown activity is the nearest UNLOCKED one on the receiving
+        // side of the divider — locked segments in between simply slide.
+        let receiver = d >= 0 ? leftIndex : leftIndex + 1;
+        if (d >= 0) { while (receiver >= 0 && locked[receiver]) receiver--; }
+        else { while (receiver < vals.length && locked[receiver]) receiver++; }
+        if (receiver < 0 || receiver >= vals.length) return vals;
         const all = vals.map((_, i) => i);
         const givers = (d >= 0 ? all.slice(leftIndex + 1) : all.slice(0, leftIndex + 1))
           .filter(i => !locked[i]);
