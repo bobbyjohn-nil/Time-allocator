@@ -219,7 +219,7 @@
   }
 
   // Round a raw allocation to whole minutes summing exactly to X, ordered
-  // most-behind first, folding sub-10-minute slivers into the biggest block.
+  // most-behind first, folding sub-30-minute slivers into the biggest block.
   function finalizePlan(alloc, X) {
     alloc.sort((a, b) => b.minutes - a.minutes);
     const floors = alloc.map(a => Math.floor(a.minutes));
@@ -232,9 +232,9 @@
     }
     let blocks = alloc.map((a, i) => ({ activity: a.stat.activity, minutes: floors[i] })).filter(b => b.minutes > 0);
     if (blocks.length > 1) {
-      const keep = blocks.filter(b => b.minutes >= 10);
+      const keep = blocks.filter(b => b.minutes >= 30);
       if (keep.length && keep.length < blocks.length) {
-        keep[0].minutes += blocks.filter(b => b.minutes < 10).reduce((a, b) => a + b.minutes, 0);
+        keep[0].minutes += blocks.filter(b => b.minutes < 30).reduce((a, b) => a + b.minutes, 0);
         blocks = keep;
       }
     }
