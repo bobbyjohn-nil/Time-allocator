@@ -261,7 +261,6 @@ select, input[type="text"], input[type="number"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: flex-grow 0.06s linear;
 }
 
 .alloc-seg-label {
@@ -290,7 +289,7 @@ select, input[type="text"], input[type="number"] {
   background: var(--baseline);
 }
 
-.alloc-labels { display: flex; margin-top: 6px; }
+.alloc-labels { display: flex; align-items: flex-start; margin-top: 6px; }
 
 .alloc-label-cell {
   flex-basis: 0;
@@ -301,7 +300,6 @@ select, input[type="text"], input[type="number"] {
   gap: 2px;
   text-align: center;
   overflow: hidden;
-  transition: flex-grow 0.06s linear;
 }
 
 .alloc-label-spacer { flex: 0 0 12px; }
@@ -321,17 +319,17 @@ select, input[type="text"], input[type="number"] {
   white-space: nowrap;
 }
 
+/* When the name is wider than its segment, stand it upright instead of
+   truncating so it stays readable at any segment width. */
+.alloc-label-name.rotated {
+  writing-mode: vertical-rl;
+  max-width: none;
+  max-height: 140px;
+}
+
 .alloc-label-name:hover { text-decoration: underline; }
 
-.alloc-label-meta {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-  max-width: 100%;
-}
+.alloc-label-del { font-size: 0.8rem; padding: 2px 3px; }
 
 .icon-btn {
   font: inherit;

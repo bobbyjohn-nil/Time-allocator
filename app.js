@@ -229,7 +229,7 @@
     const segEls = {};
     const segLabels = {};
     const labelCells = {};
-    const labelPcts = {};
+    const labelNames = {};
 
     function refreshPcts() {
       const p = displayPercents();
@@ -237,12 +237,12 @@
         segEls[a.id].style.flexGrow = a.targetPercent;
         labelCells[a.id].style.flexGrow = a.targetPercent;
         segLabels[a.id].textContent = `${p[a.id]}%`;
-        labelPcts[a.id].textContent = `${p[a.id]}%`;
       });
       fitSegLabels();
     }
 
-    // Only show a segment's % label when it actually fits inside the segment.
+    // Only show a segment's % label when it actually fits inside the segment,
+    // and rotate a name to vertical once it no longer fits under its segment.
     function fitSegLabels() {
       state.activities.forEach(a => {
         const seg = segEls[a.id];
@@ -255,14 +255,21 @@
           const lum = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
           lbl.style.color = lum > 0.62 ? '#0b0b0b' : '#ffffff';
         }
+
+        const nameEl = labelNames[a.id];
+        const cell = labelCells[a.id];
+        nameEl.classList.remove('rotated');
+        if (nameEl.scrollWidth > cell.clientWidth - 2) nameEl.classList.add('rotated');
       });
     }
 
     // Dragging the divider between two neighbors trades share between
     // them only; everything else stays put, so the bar stays at 100%.
+    // Each side keeps at least 5% so no activity ever vanishes from the bar.
     function wireHandle(handle, a, b, bar) {
       const apply = (aVal, combined) => {
-        a.targetPercent = Math.max(0, Math.min(combined, aVal));
+        const lo = Math.min(5, combined / 2);
+        a.targetPercent = Math.max(lo, Math.min(combined - lo, aVal));
         b.targetPercent = combined - a.targetPercent;
         refreshPcts();
       };
@@ -347,20 +354,15 @@
       name.textContent = act.name;
       name.title = `${act.name} — click to rename`;
       name.addEventListener('click', () => editActivity(act));
-
-      const meta = document.createElement('span');
-      meta.className = 'alloc-label-meta';
-      const pct = document.createElement('span');
-      labelPcts[act.id] = pct;
+      labelNames[act.id] = name;
 
       const del = document.createElement('button');
-      del.className = 'icon-btn danger';
+      del.className = 'icon-btn danger alloc-label-del';
       del.title = `Delete ${act.name}`;
       del.textContent = '✕';
       del.addEventListener('click', () => deleteActivity(act));
 
-      meta.append(pct, del);
-      cell.append(name, meta);
+      cell.append(name, del);
       labelCells[act.id] = cell;
       labels.appendChild(cell);
     });
