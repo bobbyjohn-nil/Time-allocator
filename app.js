@@ -42,6 +42,13 @@
 
   const MIN_SHARE = 5;
 
+  const SVG_LOCK_CLOSED =
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">' +
+    '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  const SVG_LOCK_OPEN =
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">' +
+    '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.8-1.3"/></svg>';
+
   // Take `amount` total from vals[idxs], as evenly as possible, never
   // pushing any below `floor`. Mutates vals; returns what was collected.
   function takeEvenly(vals, idxs, amount, floor) {
@@ -309,37 +316,26 @@
       });
     }
 
-    // Dragging the divider after activity `leftIndex` resizes that activity;
-    // the difference is spread evenly over ALL other activities (each kept
-    // above a minimum share), so growing one gently shrinks everything else.
-    // A binary search picks the resize amount that keeps the divider under
-    // the pointer.
+    // Pushing the divider into a side takes time evenly from the unlocked
+    // activities on THAT side and gives it to the activity being enlarged:
+    // drag right = grow the activity left of the divider, funded evenly by
+    // the right side; drag left = grow the right one, funded by the left
+    // side. Locked activities never give or receive.
     function wireHandle(handle, leftIndex, bar) {
       const floor = () => Math.min(MIN_SHARE, 100 / state.activities.length);
 
-      function sharesFor(P0, g) {
+      function applyDelta(P0, locked, d) {
         const vals = P0.slice();
-        const idxs = vals.map((_, i) => i).filter(i => i !== leftIndex);
-        if (g >= 0) {
-          vals[leftIndex] += takeEvenly(vals, idxs, g, floor());
-        } else {
-          const newA = Math.max(floor(), vals[leftIndex] + g);
-          const freed = vals[leftIndex] - newA;
-          vals[leftIndex] = newA;
-          idxs.forEach(i => { vals[i] += freed / idxs.length; });
-        }
+        const receiver = d >= 0 ? leftIndex : leftIndex + 1;
+        if (locked[receiver]) return vals;
+        const all = vals.map((_, i) => i);
+        const givers = (d >= 0 ? all.slice(leftIndex + 1) : all.slice(0, leftIndex + 1))
+          .filter(i => !locked[i]);
+        vals[receiver] += takeEvenly(vals, givers, Math.abs(d), floor());
         return vals;
       }
 
-      const boundaryOf = vals => vals.slice(0, leftIndex + 1).reduce((a, b) => a + b, 0);
-
-      function applyBoundary(P0, target) {
-        let lo = -100, hi = 100;
-        for (let k = 0; k < 40; k++) {
-          const mid = (lo + hi) / 2;
-          if (boundaryOf(sharesFor(P0, mid)) < target) lo = mid; else hi = mid;
-        }
-        const vals = sharesFor(P0, (lo + hi) / 2);
+      function commit(vals) {
         state.activities.forEach((a, i) => { a.targetPercent = vals[i]; });
         refreshPcts();
       }
@@ -347,10 +343,10 @@
       handle.addEventListener('pointerdown', e => {
         e.preventDefault();
         const P0 = state.activities.map(a => a.targetPercent);
-        const b0 = boundaryOf(P0);
+        const locked = state.activities.map(a => !!a.locked);
         const startX = e.clientX;
         const width = bar.getBoundingClientRect().width;
-        const move = ev => applyBoundary(P0, b0 + ((ev.clientX - startX) / width) * 100);
+        const move = ev => commit(applyDelta(P0, locked, ((ev.clientX - startX) / width) * 100));
         const up = () => {
           document.removeEventListener('pointermove', move);
           document.removeEventListener('pointerup', up);
@@ -366,7 +362,8 @@
         e.preventDefault();
         const step = (e.shiftKey ? 5 : 1) * (e.key === 'ArrowRight' ? 1 : -1);
         const P0 = state.activities.map(a => a.targetPercent);
-        applyBoundary(P0, boundaryOf(P0) + step);
+        const locked = state.activities.map(a => !!a.locked);
+        commit(applyDelta(P0, locked, step));
         save();
         renderBalance();
       });
@@ -428,13 +425,28 @@
       name.addEventListener('click', () => editActivity(act));
       labelNames[act.id] = name;
 
+      const lock = document.createElement('button');
+      lock.className = 'icon-btn alloc-label-lock' + (act.locked ? ' locked' : '');
+      lock.title = act.locked
+        ? `Unlock ${act.name}`
+        : `Lock ${act.name} at its current share`;
+      lock.innerHTML = act.locked ? SVG_LOCK_CLOSED : SVG_LOCK_OPEN;
+      lock.addEventListener('click', () => {
+        act.locked = !act.locked;
+        save();
+        render();
+      });
+
       const del = document.createElement('button');
       del.className = 'icon-btn danger alloc-label-del';
       del.title = `Delete ${act.name}`;
       del.textContent = '✕';
       del.addEventListener('click', () => deleteActivity(act));
 
-      cell.append(name, del);
+      const actions = document.createElement('span');
+      actions.className = 'alloc-label-actions';
+      actions.append(lock, del);
+      cell.append(name, actions);
       labelCells[act.id] = cell;
       labels.appendChild(cell);
     });
@@ -639,16 +651,19 @@
   // ---------- Activity CRUD ----------
 
   // A new activity claims an equal share (100/n), funded evenly by the
-  // existing activities so their relative ratios are preserved.
+  // existing UNLOCKED activities so ratios and locks are preserved.
   function addActivity(name) {
     const n = state.activities.length + 1;
     const act = { id: uid(), name, targetPercent: 100 / n, createdAt: Date.now() };
     if (state.activities.length > 0) {
       const vals = state.activities.map(a => a.targetPercent);
-      const idxs = vals.map((_, i) => i);
+      const idxs = vals.map((_, i) => i).filter(i => !state.activities[i].locked);
       const floor = Math.min(MIN_SHARE, 100 / n);
       act.targetPercent = takeEvenly(vals, idxs, 100 / n, floor);
       state.activities.forEach((a, i) => { a.targetPercent = vals[i]; });
+      if (act.targetPercent < 1e-9 && idxs.length === 0) {
+        showToast('All other activities are locked — unlock one to give the new activity time.');
+      }
     }
     state.activities.push(act);
     save();
@@ -671,7 +686,13 @@
     if (!confirm(msg)) return;
     state.activities = state.activities.filter(a => a.id !== act.id);
     state.sessions = state.sessions.filter(s => s.activityId !== act.id);
-    normalizeTargets(state.activities);
+    // Hand the freed share evenly to the unlocked survivors.
+    if (state.activities.length > 0) {
+      const freed = 100 - state.activities.reduce((a, x) => a + x.targetPercent, 0);
+      const unlocked = state.activities.filter(a => !a.locked);
+      const pool = unlocked.length ? unlocked : state.activities;
+      pool.forEach(a => { a.targetPercent += freed / pool.length; });
+    }
     save();
     render();
   }

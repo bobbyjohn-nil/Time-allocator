@@ -320,6 +320,13 @@ select, input[type="text"], input[type="number"] {
 
 .alloc-label-del { font-size: 0.8rem; padding: 2px 3px; }
 
+.alloc-label-actions { display: flex; align-items: center; gap: 2px; }
+
+.alloc-label-lock { padding: 2px 3px; display: inline-flex; align-items: center; }
+.alloc-label-lock svg { display: block; }
+.alloc-label-lock.locked { color: var(--accent); }
+.alloc-label-lock.locked:hover { color: var(--accent); }
+
 .icon-btn {
   font: inherit;
   background: none;
