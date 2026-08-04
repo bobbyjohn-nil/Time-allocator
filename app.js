@@ -308,7 +308,14 @@
       del.textContent = '✕';
       del.addEventListener('click', () => deleteActivity(act));
 
-      row.append(name, slider, pct, edit, del);
+      const meta = document.createElement('div');
+      meta.className = 'activity-meta';
+      const actions = document.createElement('div');
+      actions.className = 'activity-actions';
+      actions.append(edit, del);
+      meta.append(pct, actions);
+
+      row.append(name, slider, meta);
       activityList.appendChild(row);
     });
 
