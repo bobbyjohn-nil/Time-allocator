@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Allocator</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏳</text></svg>">
+</head>
+<body>
+  <header class="site-header">
+    <h1>⏳ Time Allocator</h1>
+    <p class="tagline">Tell it how you want to split your free time — it tells you what to do next.</p>
+  </header>
+
+  <main>
+    <!-- ============ RECOMMENDATION ============ -->
+    <section class="card hero-card" id="recommend-section">
+      <div class="hero-inner">
+        <button id="ask-btn" class="btn btn-hero">What should I do?</button>
+        <div id="recommendation" class="recommendation hidden" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ============ TIMER ============ -->
+    <section class="card" id="timer-section">
+      <h2>Timer</h2>
+      <div class="timer-row">
+        <select id="timer-activity" aria-label="Activity for timer"></select>
+        <button id="timer-toggle" class="btn btn-primary">Start</button>
+        <span id="timer-display" class="timer-display" hidden>0:00</span>
+        <button id="timer-cancel" class="btn btn-ghost" hidden>Cancel</button>
+      </div>
+      <p class="hint">Start the timer when you begin an activity; stopping it logs the time automatically.</p>
+    </section>
+
+    <!-- ============ BALANCE ============ -->
+    <section class="card" id="balance-section">
+      <div class="section-head">
+        <h2>Your balance</h2>
+        <div class="range-toggle" role="group" aria-label="Time range">
+          <button class="range-btn active" data-range="week">This week</button>
+          <button class="range-btn" data-range="7d">Last 7 days</button>
+          <button class="range-btn" data-range="all">All time</button>
+        </div>
+      </div>
+      <p id="balance-summary" class="hint"></p>
+      <div id="balance-chart" class="balance-chart"></div>
+    </section>
+
+    <!-- ============ ACTIVITIES ============ -->
+    <section class="card" id="activities-section">
+      <h2>Activities</h2>
+      <div id="activity-list" class="activity-list"></div>
+      <p id="target-total" class="hint"></p>
+      <form id="activity-form" class="activity-form">
+        <input type="text" id="new-name" placeholder="Activity name (e.g. Studying)" maxlength="40" required>
+        <div class="pct-wrap">
+          <input type="number" id="new-percent" placeholder="30" min="1" max="100" step="1" required aria-label="Target percent">
+          <span class="pct-sign">%</span>
+        </div>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+    </section>
+
+    <!-- ============ LOG TIME ============ -->
+    <section class="card" id="log-section">
+      <h2>Log time</h2>
+      <p class="hint">Already did something? Log it here so the recommendations stay accurate.</p>
+      <form id="log-form" class="log-form">
+        <select id="log-activity" aria-label="Activity" required></select>
+        <div class="quick-chips" id="quick-chips">
+          <button type="button" class="chip" data-min="15">+15m</button>
+          <button type="button" class="chip" data-min="30">+30m</button>
+          <button type="button" class="chip" data-min="60">+1h</button>
+          <button type="button" class="chip" data-min="120">+2h</button>
+        </div>
+        <div class="custom-log">
+          <input type="number" id="log-minutes" placeholder="minutes" min="1" max="1440" step="1" aria-label="Minutes">
+          <button type="submit" class="btn btn-primary">Log</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ============ HISTORY ============ -->
+    <section class="card" id="history-section">
+      <h2>History</h2>
+      <ul id="history-list" class="history-list"></ul>
+      <p id="history-empty" class="hint">No sessions logged yet.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <button id="export-btn" class="btn btn-ghost">Export data</button>
+    <label class="btn btn-ghost file-label">Import data<input type="file" id="import-input" accept=".json" hidden></label>
+    <span class="footer-note">All data stays in your browser.</span>
+  </footer>
+
+  <div id="tooltip" class="tooltip" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

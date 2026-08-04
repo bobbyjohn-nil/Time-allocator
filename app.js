@@ -1,0 +1,648 @@
+/* Time Allocator — deficit-based scheduling of free time.
+   All data lives in localStorage; no server. */
+
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'timeAllocator.v1';
+  const TIMER_KEY = 'timeAllocator.timer.v1';
+  const SERIES_SLOTS = 8;
+
+  // ---------- State ----------
+
+  let state = load();
+  let range = 'week'; // 'week' | '7d' | 'all'
+  let timerInterval = null;
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.activities) && Array.isArray(parsed.sessions)) {
+          return parsed;
+        }
+      }
+    } catch (e) { /* corrupted storage falls through to fresh state */ }
+    return { activities: [], sessions: [] };
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  // ---------- Time helpers ----------
+
+  function startOfWeek(d) {
+    const date = new Date(d);
+    date.setHours(0, 0, 0, 0);
+    const day = (date.getDay() + 6) % 7; // Monday = 0
+    date.setDate(date.getDate() - day);
+    return date;
+  }
+
+  function rangeStart() {
+    const now = new Date();
+    if (range === 'week') return startOfWeek(now).getTime();
+    if (range === '7d') return now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    return 0;
+  }
+
+  function windowSessions() {
+    const start = rangeStart();
+    return state.sessions.filter(s => s.timestamp >= start);
+  }
+
+  function fmtDuration(mins) {
+    mins = Math.round(mins);
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  }
+
+  function fmtWhen(ts) {
+    const d = new Date(ts);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const that = new Date(ts); that.setHours(0, 0, 0, 0);
+    const days = Math.round((today - that) / 86400000);
+    const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (days === 0) return `Today ${time}`;
+    if (days === 1) return `Yesterday ${time}`;
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ` ${time}`;
+  }
+
+  function colorOf(activity) {
+    const idx = state.activities.indexOf(activity);
+    return idx < SERIES_SLOTS ? `var(--series-${idx + 1})` : 'var(--series-other)';
+  }
+
+  // ---------- Stats & recommendation ----------
+
+  // Returns per-activity stats over the current range, with targets normalized
+  // so they always behave proportionally even if they don't sum to 100.
+  function computeStats() {
+    const sessions = windowSessions();
+    const totalMins = sessions.reduce((a, s) => a + s.minutes, 0);
+    const targetSum = state.activities.reduce((a, x) => a + x.targetPercent, 0);
+
+    const stats = state.activities.map(act => {
+      const spent = sessions
+        .filter(s => s.activityId === act.id)
+        .reduce((a, s) => a + s.minutes, 0);
+      const targetShare = targetSum > 0 ? act.targetPercent / targetSum : 0;
+      const actualShare = totalMins > 0 ? spent / totalMins : 0;
+      const lastDone = state.sessions
+        .filter(s => s.activityId === act.id)
+        .reduce((a, s) => Math.max(a, s.timestamp), 0);
+      return { activity: act, spent, targetShare, actualShare, lastDone };
+    });
+
+    return { stats, totalMins, targetSum };
+  }
+
+  // Pick the activity furthest behind its target share, measured in minutes:
+  // deficit = target share × total tracked time − time spent on it.
+  function recommend() {
+    const { stats, totalMins } = computeStats();
+    if (stats.length === 0) return null;
+
+    if (totalMins === 0) {
+      const best = [...stats].sort((a, b) => b.targetShare - a.targetShare)[0];
+      return { ...best, deficit: 0, firstTime: true, suggested: suggestMinutes(best, 0) };
+    }
+
+    const ranked = [...stats].sort((a, b) => {
+      const da = a.targetShare * totalMins - a.spent;
+      const db = b.targetShare * totalMins - b.spent;
+      if (db !== da) return db - da;
+      if (b.targetShare !== a.targetShare) return b.targetShare - a.targetShare;
+      return a.lastDone - b.lastDone; // least recently done wins ties
+    });
+
+    const best = ranked[0];
+    return {
+      ...best,
+      deficit: best.targetShare * totalMins - best.spent,
+      firstTime: false,
+      suggested: suggestMinutes(best, totalMins),
+    };
+  }
+
+  // How long to work on it so its share reaches the target:
+  // solve (spent + x) / (total + x) = targetShare  →  x = deficit / (1 − targetShare).
+  function suggestMinutes(stat, totalMins) {
+    let x;
+    if (stat.targetShare >= 1 || totalMins === 0) {
+      x = 45;
+    } else {
+      x = (stat.targetShare * totalMins - stat.spent) / (1 - stat.targetShare);
+    }
+    x = Math.max(15, Math.min(120, x));
+    return Math.round(x / 5) * 5;
+  }
+
+  // ---------- DOM refs ----------
+
+  const $ = id => document.getElementById(id);
+  const askBtn = $('ask-btn');
+  const recBox = $('recommendation');
+  const activityList = $('activity-list');
+  const targetTotal = $('target-total');
+  const activityForm = $('activity-form');
+  const newName = $('new-name');
+  const newPercent = $('new-percent');
+  const logForm = $('log-form');
+  const logActivity = $('log-activity');
+  const logMinutes = $('log-minutes');
+  const quickChips = $('quick-chips');
+  const timerActivity = $('timer-activity');
+  const timerToggle = $('timer-toggle');
+  const timerDisplay = $('timer-display');
+  const timerCancel = $('timer-cancel');
+  const balanceChart = $('balance-chart');
+  const balanceSummary = $('balance-summary');
+  const historyList = $('history-list');
+  const historyEmpty = $('history-empty');
+  const tooltip = $('tooltip');
+  const toast = $('toast');
+
+  // ---------- Rendering ----------
+
+  function render() {
+    renderActivities();
+    renderSelects();
+    renderBalance();
+    renderHistory();
+  }
+
+  function renderActivities() {
+    activityList.innerHTML = '';
+    if (state.activities.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'hint';
+      p.textContent = 'No activities yet — add the things you want to spend your free time on below.';
+      activityList.appendChild(p);
+      targetTotal.textContent = '';
+      return;
+    }
+
+    state.activities.forEach(act => {
+      const row = document.createElement('div');
+      row.className = 'activity-row';
+
+      const name = document.createElement('span');
+      name.className = 'activity-name';
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = colorOf(act);
+      name.append(sw, document.createTextNode(act.name));
+
+      const pct = document.createElement('span');
+      pct.className = 'activity-pct';
+      pct.textContent = `${act.targetPercent}%`;
+
+      const edit = document.createElement('button');
+      edit.className = 'icon-btn';
+      edit.title = 'Edit';
+      edit.textContent = '✏️';
+      edit.addEventListener('click', () => editActivity(act));
+
+      const del = document.createElement('button');
+      del.className = 'icon-btn danger';
+      del.title = 'Delete';
+      del.textContent = '✕';
+      del.addEventListener('click', () => deleteActivity(act));
+
+      row.append(name, pct, edit, del);
+      activityList.appendChild(row);
+    });
+
+    const sum = state.activities.reduce((a, x) => a + x.targetPercent, 0);
+    if (sum === 100) {
+      targetTotal.textContent = 'Targets add up to 100%.';
+      targetTotal.classList.remove('target-warn');
+    } else {
+      targetTotal.textContent = `Targets add up to ${sum}% — they'll be treated proportionally, but 100% is easiest to reason about.`;
+      targetTotal.classList.add('target-warn');
+    }
+  }
+
+  function renderSelects() {
+    for (const sel of [logActivity, timerActivity]) {
+      const prev = sel.value;
+      sel.innerHTML = '';
+      state.activities.forEach(act => {
+        const opt = document.createElement('option');
+        opt.value = act.id;
+        opt.textContent = act.name;
+        sel.appendChild(opt);
+      });
+      if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+    }
+  }
+
+  function renderBalance() {
+    const { stats, totalMins } = computeStats();
+    balanceChart.innerHTML = '';
+
+    if (stats.length === 0) {
+      balanceSummary.textContent = 'Add some activities to see your balance.';
+      return;
+    }
+
+    const rangeLabel = range === 'week' ? 'this week' : range === '7d' ? 'in the last 7 days' : 'in total';
+    balanceSummary.textContent = totalMins === 0
+      ? `Nothing tracked ${rangeLabel} yet.`
+      : `${fmtDuration(totalMins)} of free time tracked ${rangeLabel}.`;
+
+    // Axis max: largest of target/actual shares, padded to the next 10%.
+    const maxShare = Math.max(
+      0.1,
+      ...stats.map(s => Math.max(s.targetShare, s.actualShare))
+    );
+    const axisMax = Math.min(1, Math.ceil(maxShare * 10) / 10);
+
+    stats.forEach(stat => {
+      const actualPct = Math.round(stat.actualShare * 100);
+      const targetPct = Math.round(stat.targetShare * 100);
+
+      const row = document.createElement('div');
+      row.className = 'balance-row';
+
+      const label = document.createElement('div');
+      label.className = 'balance-label';
+      const name = document.createElement('span');
+      name.className = 'balance-name';
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = colorOf(stat.activity);
+      name.append(sw, document.createTextNode(stat.activity.name));
+
+      const values = document.createElement('span');
+      values.className = 'balance-values';
+      if (totalMins === 0) {
+        values.textContent = `target ${targetPct}%`;
+      } else {
+        const diff = actualPct - targetPct;
+        const status = diff >= 0 ? `<span class="ahead">on track</span>` : `${targetPct - actualPct}pt behind`;
+        values.innerHTML = `${actualPct}% of ${targetPct}% · ${status}`;
+      }
+
+      label.append(name, values);
+
+      const track = document.createElement('div');
+      track.className = 'balance-track';
+
+      const fill = document.createElement('div');
+      fill.className = 'balance-fill';
+      fill.style.background = colorOf(stat.activity);
+      fill.style.width = `${Math.min(100, (stat.actualShare / axisMax) * 100)}%`;
+      if (stat.actualShare === 0) fill.style.display = 'none';
+
+      const target = document.createElement('div');
+      target.className = 'balance-target';
+      target.style.left = `calc(${Math.min(100, (stat.targetShare / axisMax) * 100)}% - 1px)`;
+
+      track.append(fill, target);
+      attachTooltip(track, () =>
+        `${stat.activity.name} — ${fmtDuration(stat.spent)} (${actualPct}% of tracked time) · target ${targetPct}%`
+      );
+
+      row.append(label, track);
+      balanceChart.appendChild(row);
+    });
+  }
+
+  function renderHistory() {
+    historyList.innerHTML = '';
+    const recent = [...state.sessions].sort((a, b) => b.timestamp - a.timestamp).slice(0, 25);
+    historyEmpty.style.display = recent.length ? 'none' : '';
+
+    recent.forEach(s => {
+      const act = state.activities.find(a => a.id === s.activityId);
+      const li = document.createElement('li');
+      li.className = 'history-item';
+
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = act ? colorOf(act) : 'var(--series-other)';
+
+      const name = document.createElement('span');
+      name.textContent = act ? act.name : '(deleted activity)';
+
+      const mins = document.createElement('span');
+      mins.className = 'history-mins';
+      mins.textContent = fmtDuration(s.minutes);
+
+      const when = document.createElement('span');
+      when.className = 'history-when';
+      when.textContent = fmtWhen(s.timestamp);
+
+      const del = document.createElement('button');
+      del.className = 'icon-btn danger';
+      del.title = 'Delete session';
+      del.textContent = '✕';
+      del.addEventListener('click', () => {
+        state.sessions = state.sessions.filter(x => x.id !== s.id);
+        save();
+        render();
+      });
+
+      li.append(sw, name, mins, when, del);
+      historyList.appendChild(li);
+    });
+  }
+
+  function renderRecommendation() {
+    const rec = recommend();
+    recBox.classList.remove('hidden');
+    recBox.innerHTML = '';
+
+    if (!rec) {
+      recBox.innerHTML = `<p class="rec-reason">Add some activities first, then ask again!</p>`;
+      return;
+    }
+
+    const { totalMins } = computeStats();
+    const act = rec.activity;
+
+    const headline = document.createElement('div');
+    headline.className = 'rec-headline';
+    const sw = document.createElement('span');
+    sw.className = 'rec-swatch';
+    sw.style.background = colorOf(act);
+    headline.append(sw, document.createTextNode(act.name));
+
+    const reason = document.createElement('p');
+    reason.className = 'rec-reason';
+    if (rec.firstTime || totalMins === 0) {
+      reason.textContent = `Nothing tracked yet in this period, so start with your biggest priority (${Math.round(rec.targetShare * 100)}% target).`;
+    } else {
+      const actualPct = Math.round(rec.actualShare * 100);
+      const targetPct = Math.round(rec.targetShare * 100);
+      reason.textContent = actualPct < targetPct
+        ? `You've spent ${actualPct}% of your tracked free time on this — your target is ${targetPct}%, so it's the furthest behind.`
+        : `Everything is at or above target — this one benefits most from more time right now.`;
+    }
+
+    const duration = document.createElement('p');
+    duration.className = 'rec-duration';
+    duration.innerHTML = `Suggested: about <strong>${fmtDuration(rec.suggested)}</strong> to get back on target.`;
+
+    const actions = document.createElement('div');
+    actions.className = 'rec-actions';
+
+    const startBtn = document.createElement('button');
+    startBtn.className = 'btn btn-primary';
+    startBtn.textContent = 'Start timer';
+    startBtn.addEventListener('click', () => {
+      timerActivity.value = act.id;
+      startTimer();
+      $('timer-section').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    const logBtn = document.createElement('button');
+    logBtn.className = 'btn btn-ghost';
+    logBtn.textContent = `Log ${fmtDuration(rec.suggested)} now`;
+    logBtn.addEventListener('click', () => {
+      addSession(act.id, rec.suggested);
+      showToast(`Logged ${fmtDuration(rec.suggested)} of ${act.name}`);
+      renderRecommendation();
+    });
+
+    actions.append(startBtn, logBtn);
+    recBox.append(headline, reason, duration, actions);
+  }
+
+  // ---------- Activity CRUD ----------
+
+  function addActivity(name, percent) {
+    state.activities.push({ id: uid(), name, targetPercent: percent, createdAt: Date.now() });
+    save();
+    render();
+  }
+
+  function editActivity(act) {
+    const name = prompt('Activity name:', act.name);
+    if (name === null) return;
+    const pctRaw = prompt('Target percent of your free time:', String(act.targetPercent));
+    if (pctRaw === null) return;
+    const pct = parseInt(pctRaw, 10);
+    if (!name.trim() || !(pct >= 1 && pct <= 100)) {
+      showToast('Invalid name or percent — nothing changed.');
+      return;
+    }
+    act.name = name.trim();
+    act.targetPercent = pct;
+    save();
+    render();
+  }
+
+  function deleteActivity(act) {
+    const n = state.sessions.filter(s => s.activityId === act.id).length;
+    const msg = n
+      ? `Delete "${act.name}" and its ${n} logged session${n === 1 ? '' : 's'}?`
+      : `Delete "${act.name}"?`;
+    if (!confirm(msg)) return;
+    state.activities = state.activities.filter(a => a.id !== act.id);
+    state.sessions = state.sessions.filter(s => s.activityId !== act.id);
+    save();
+    render();
+  }
+
+  function addSession(activityId, minutes) {
+    state.sessions.push({ id: uid(), activityId, minutes, timestamp: Date.now() });
+    save();
+    render();
+  }
+
+  // ---------- Timer ----------
+
+  function getTimer() {
+    try {
+      const raw = localStorage.getItem(TIMER_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function startTimer() {
+    if (!timerActivity.value) {
+      showToast('Add an activity first.');
+      return;
+    }
+    localStorage.setItem(TIMER_KEY, JSON.stringify({
+      activityId: timerActivity.value,
+      startedAt: Date.now(),
+    }));
+    syncTimerUI();
+  }
+
+  function stopTimer() {
+    const t = getTimer();
+    localStorage.removeItem(TIMER_KEY);
+    syncTimerUI();
+    if (!t) return;
+    const minutes = Math.round((Date.now() - t.startedAt) / 60000);
+    if (minutes < 1) {
+      showToast('Less than a minute — not logged.');
+      return;
+    }
+    const act = state.activities.find(a => a.id === t.activityId);
+    addSession(t.activityId, minutes);
+    showToast(`Logged ${fmtDuration(minutes)}${act ? ` of ${act.name}` : ''}`);
+  }
+
+  function cancelTimer() {
+    localStorage.removeItem(TIMER_KEY);
+    syncTimerUI();
+  }
+
+  function syncTimerUI() {
+    const t = getTimer();
+    clearInterval(timerInterval);
+
+    if (t) {
+      timerToggle.textContent = 'Stop & log';
+      timerDisplay.hidden = false;
+      timerCancel.hidden = false;
+      timerActivity.value = t.activityId;
+      timerActivity.disabled = true;
+      const tick = () => {
+        const secs = Math.floor((Date.now() - t.startedAt) / 1000);
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        timerDisplay.textContent = `${m}:${String(s).padStart(2, '0')}`;
+      };
+      tick();
+      timerInterval = setInterval(tick, 1000);
+    } else {
+      timerToggle.textContent = 'Start';
+      timerDisplay.hidden = true;
+      timerCancel.hidden = true;
+      timerActivity.disabled = false;
+    }
+  }
+
+  // ---------- Tooltip & toast ----------
+
+  function attachTooltip(el, getText) {
+    el.addEventListener('mousemove', e => {
+      tooltip.textContent = getText();
+      tooltip.hidden = false;
+      const pad = 12;
+      let x = e.clientX + pad;
+      let y = e.clientY + pad;
+      const rect = tooltip.getBoundingClientRect();
+      if (x + rect.width > window.innerWidth - 8) x = e.clientX - rect.width - pad;
+      if (y + rect.height > window.innerHeight - 8) y = e.clientY - rect.height - pad;
+      tooltip.style.left = `${x}px`;
+      tooltip.style.top = `${y}px`;
+    });
+    el.addEventListener('mouseleave', () => { tooltip.hidden = true; });
+  }
+
+  let toastTimeout = null;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.hidden = false;
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => { toast.hidden = true; }, 2500);
+  }
+
+  // ---------- Export / import ----------
+
+  function exportData() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'time-allocator-data.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!Array.isArray(parsed.activities) || !Array.isArray(parsed.sessions)) {
+          throw new Error('bad shape');
+        }
+        if (!confirm('Replace your current data with the imported file?')) return;
+        state = parsed;
+        save();
+        render();
+        showToast('Data imported.');
+      } catch (e) {
+        showToast("Couldn't read that file — is it a Time Allocator export?");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- Events ----------
+
+  askBtn.addEventListener('click', renderRecommendation);
+
+  activityForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const name = newName.value.trim();
+    const pct = parseInt(newPercent.value, 10);
+    if (!name || !(pct >= 1 && pct <= 100)) return;
+    addActivity(name, pct);
+    newName.value = '';
+    newPercent.value = '';
+    newName.focus();
+  });
+
+  logForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const mins = parseInt(logMinutes.value, 10);
+    if (!logActivity.value || !(mins >= 1)) return;
+    addSession(logActivity.value, mins);
+    const act = state.activities.find(a => a.id === logActivity.value);
+    showToast(`Logged ${fmtDuration(mins)}${act ? ` of ${act.name}` : ''}`);
+    logMinutes.value = '';
+  });
+
+  quickChips.addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip || !logActivity.value) return;
+    const mins = parseInt(chip.dataset.min, 10);
+    addSession(logActivity.value, mins);
+    const act = state.activities.find(a => a.id === logActivity.value);
+    showToast(`Logged ${fmtDuration(mins)}${act ? ` of ${act.name}` : ''}`);
+  });
+
+  timerToggle.addEventListener('click', () => {
+    if (getTimer()) stopTimer(); else startTimer();
+  });
+  timerCancel.addEventListener('click', cancelTimer);
+
+  document.querySelectorAll('.range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      range = btn.dataset.range;
+      renderBalance();
+      if (!recBox.classList.contains('hidden')) renderRecommendation();
+    });
+  });
+
+  $('export-btn').addEventListener('click', exportData);
+  $('import-input').addEventListener('change', e => {
+    if (e.target.files[0]) importData(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  // ---------- Init ----------
+
+  render();
+  syncTimerUI();
+})();
