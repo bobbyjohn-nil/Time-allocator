@@ -299,7 +299,6 @@ select, input[type="text"], input[type="number"] {
   align-items: center;
   gap: 2px;
   text-align: center;
-  overflow: hidden;
 }
 
 .alloc-label-spacer { flex: 0 0 12px; }
@@ -313,18 +312,8 @@ select, input[type="text"], input[type="number"] {
   padding: 0;
   color: var(--text-primary);
   cursor: pointer;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* When the name is wider than its segment, stand it upright instead of
-   truncating so it stays readable at any segment width. */
-.alloc-label-name.rotated {
-  writing-mode: vertical-rl;
-  max-width: none;
-  max-height: 140px;
+  transition: transform 0.12s linear, margin-bottom 0.12s linear;
 }
 
 .alloc-label-name:hover { text-decoration: underline; }

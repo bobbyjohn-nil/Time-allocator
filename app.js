@@ -242,7 +242,9 @@
     }
 
     // Only show a segment's % label when it actually fits inside the segment,
-    // and rotate a name to vertical once it no longer fits under its segment.
+    // and rotate a name counter-clockwise just far enough that its bounding
+    // box fits the width its segment gives it — diagonal when possible,
+    // fully vertical only when it must be.
     function fitSegLabels() {
       state.activities.forEach(a => {
         const seg = segEls[a.id];
@@ -258,8 +260,33 @@
 
         const nameEl = labelNames[a.id];
         const cell = labelCells[a.id];
-        nameEl.classList.remove('rotated');
-        if (nameEl.scrollWidth > cell.clientWidth - 2) nameEl.classList.add('rotated');
+        // The text itself never changes mid-drag, so measure it once while
+        // it's still untransformed.
+        if (!nameEl.dataset.w) {
+          nameEl.dataset.w = nameEl.scrollWidth;
+          nameEl.dataset.h = nameEl.offsetHeight;
+        }
+        const w = +nameEl.dataset.w;
+        const h = +nameEl.dataset.h;
+        const avail = Math.max(cell.clientWidth - 4, h);
+
+        if (w <= avail) {
+          nameEl.style.transform = '';
+          nameEl.style.marginBottom = '';
+          return;
+        }
+
+        // Smallest theta with w*cos(t) + h*sin(t) = avail, i.e. the rotated
+        // bounding box exactly spans the available width.
+        const R = Math.hypot(w, h);
+        let theta = Math.atan2(h, w) + Math.acos(Math.max(-1, Math.min(1, avail / R)));
+        theta = Math.min(theta, Math.PI / 2);
+        const boxH = w * Math.sin(theta) + h * Math.cos(theta);
+        // translateY drops the rotated box so its top stays on the row line;
+        // the margin reserves its real height so the delete button sits below.
+        nameEl.style.transform =
+          `translateY(${(boxH - h) / 2}px) rotate(${(-theta * 180 / Math.PI).toFixed(2)}deg)`;
+        nameEl.style.marginBottom = `${Math.ceil(boxH - h)}px`;
       });
     }
 
