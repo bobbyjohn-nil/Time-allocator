@@ -256,11 +256,29 @@ select, input[type="text"], input[type="number"] {
   gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid var(--gridline);
+  flex-wrap: wrap;
 }
 
 .activity-row:last-child { border-bottom: none; }
-.activity-name { flex: 1; display: flex; align-items: center; gap: 8px; }
-.activity-pct { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.activity-name { flex: 1 1 130px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.activity-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.activity-slider {
+  flex: 2 1 150px;
+  min-width: 120px;
+  height: 20px;
+  margin: 0;
+  cursor: grab;
+}
+
+.activity-slider:active { cursor: grabbing; }
+
+.activity-pct {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  width: 42px;
+  text-align: right;
+}
 
 .icon-btn {
   font: inherit;
@@ -277,19 +295,6 @@ select, input[type="text"], input[type="number"] {
 
 .activity-form { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .activity-form input[type="text"] { flex: 1; min-width: 160px; }
-.pct-wrap { position: relative; }
-.pct-wrap input { width: 80px; padding-right: 26px; }
-
-.pct-sign {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  pointer-events: none;
-}
-
-.target-warn { color: var(--series-8); }
 
 /* ---------- Log form ---------- */
 .log-form { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }

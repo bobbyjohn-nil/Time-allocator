@@ -20,6 +20,7 @@
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed.activities) && Array.isArray(parsed.sessions)) {
+          normalizeTargets(parsed.activities);
           return parsed;
         }
       }
@@ -33,6 +34,56 @@
 
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  // ---------- Target percentages ----------
+  // Targets are stored as floats that always sum to 100; sliders redistribute
+  // the remainder proportionally across the other activities.
+
+  function normalizeTargets(activities) {
+    if (activities.length === 0) return;
+    const sum = activities.reduce((a, x) => a + x.targetPercent, 0);
+    if (sum > 0) {
+      activities.forEach(a => { a.targetPercent = a.targetPercent * 100 / sum; });
+    } else {
+      activities.forEach(a => { a.targetPercent = 100 / activities.length; });
+    }
+  }
+
+  function rebalance(id, value) {
+    const act = state.activities.find(a => a.id === id);
+    if (!act) return;
+    if (state.activities.length === 1) { act.targetPercent = 100; return; }
+    value = Math.max(0, Math.min(100, value));
+    const others = state.activities.filter(a => a.id !== id);
+    const othersSum = others.reduce((a, x) => a + x.targetPercent, 0);
+    const remaining = 100 - value;
+    if (othersSum > 0) {
+      others.forEach(a => { a.targetPercent = a.targetPercent * remaining / othersSum; });
+    } else {
+      others.forEach(a => { a.targetPercent = remaining / others.length; });
+    }
+    act.targetPercent = value;
+  }
+
+  // Integer percentages for display that always sum to exactly 100
+  // (largest-remainder rounding), keyed by activity id.
+  function displayPercents() {
+    const floors = state.activities.map(a => ({
+      id: a.id,
+      floor: Math.floor(a.targetPercent),
+      frac: a.targetPercent - Math.floor(a.targetPercent),
+    }));
+    let leftover = 100 - floors.reduce((a, x) => a + x.floor, 0);
+    const order = [...floors].sort((a, b) => b.frac - a.frac);
+    const map = {};
+    floors.forEach(f => { map[f.id] = f.floor; });
+    for (const f of order) {
+      if (leftover <= 0) break;
+      map[f.id] += 1;
+      leftover -= 1;
+    }
+    return map;
   }
 
   // ---------- Time helpers ----------
@@ -156,7 +207,6 @@
   const targetTotal = $('target-total');
   const activityForm = $('activity-form');
   const newName = $('new-name');
-  const newPercent = $('new-percent');
   const logForm = $('log-form');
   const logActivity = $('log-activity');
   const logMinutes = $('log-minutes');
@@ -192,6 +242,20 @@
       return;
     }
 
+    const pcts = displayPercents();
+    const pctLabels = {};
+    const sliders = {};
+
+    // Update every row's slider position and percent label from state,
+    // without rebuilding the DOM (so an in-progress drag isn't interrupted).
+    function syncRows(exceptId) {
+      const p = displayPercents();
+      state.activities.forEach(a => {
+        if (pctLabels[a.id]) pctLabels[a.id].textContent = `${p[a.id]}%`;
+        if (sliders[a.id] && a.id !== exceptId) sliders[a.id].value = a.targetPercent;
+      });
+    }
+
     state.activities.forEach(act => {
       const row = document.createElement('div');
       row.className = 'activity-row';
@@ -201,15 +265,39 @@
       const sw = document.createElement('span');
       sw.className = 'swatch';
       sw.style.background = colorOf(act);
-      name.append(sw, document.createTextNode(act.name));
+      const label = document.createElement('span');
+      label.textContent = act.name;
+      name.append(sw, label);
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.className = 'activity-slider';
+      slider.min = 0;
+      slider.max = 100;
+      slider.step = 1;
+      slider.value = act.targetPercent;
+      slider.style.accentColor = colorOf(act);
+      slider.setAttribute('aria-label', `${act.name} share of free time`);
+      slider.disabled = state.activities.length === 1;
+      slider.addEventListener('input', () => {
+        rebalance(act.id, parseFloat(slider.value));
+        syncRows(act.id);
+      });
+      slider.addEventListener('change', () => {
+        save();
+        render();
+        if (!recBox.classList.contains('hidden')) renderRecommendation();
+      });
+      sliders[act.id] = slider;
 
       const pct = document.createElement('span');
       pct.className = 'activity-pct';
-      pct.textContent = `${act.targetPercent}%`;
+      pct.textContent = `${pcts[act.id]}%`;
+      pctLabels[act.id] = pct;
 
       const edit = document.createElement('button');
       edit.className = 'icon-btn';
-      edit.title = 'Edit';
+      edit.title = 'Rename';
       edit.textContent = '✏️';
       edit.addEventListener('click', () => editActivity(act));
 
@@ -219,18 +307,13 @@
       del.textContent = '✕';
       del.addEventListener('click', () => deleteActivity(act));
 
-      row.append(name, pct, edit, del);
+      row.append(name, slider, pct, edit, del);
       activityList.appendChild(row);
     });
 
-    const sum = state.activities.reduce((a, x) => a + x.targetPercent, 0);
-    if (sum === 100) {
-      targetTotal.textContent = 'Targets add up to 100%.';
-      targetTotal.classList.remove('target-warn');
-    } else {
-      targetTotal.textContent = `Targets add up to ${sum}% — they'll be treated proportionally, but 100% is easiest to reason about.`;
-      targetTotal.classList.add('target-warn');
-    }
+    targetTotal.textContent = state.activities.length > 1
+      ? 'Drag a slider to change the split — the other activities adjust so it always totals 100%.'
+      : '';
   }
 
   function renderSelects() {
@@ -268,9 +351,10 @@
     );
     const axisMax = Math.min(1, Math.ceil(maxShare * 10) / 10);
 
+    const pcts = displayPercents();
     stats.forEach(stat => {
       const actualPct = Math.round(stat.actualShare * 100);
-      const targetPct = Math.round(stat.targetShare * 100);
+      const targetPct = pcts[stat.activity.id];
 
       const row = document.createElement('div');
       row.className = 'balance-row';
@@ -381,11 +465,12 @@
 
     const reason = document.createElement('p');
     reason.className = 'rec-reason';
+    const targetPctDisplay = displayPercents()[act.id];
     if (rec.firstTime || totalMins === 0) {
-      reason.textContent = `Nothing tracked yet in this period, so start with your biggest priority (${Math.round(rec.targetShare * 100)}% target).`;
+      reason.textContent = `Nothing tracked yet in this period, so start with your biggest priority (${targetPctDisplay}% target).`;
     } else {
       const actualPct = Math.round(rec.actualShare * 100);
-      const targetPct = Math.round(rec.targetShare * 100);
+      const targetPct = targetPctDisplay;
       reason.textContent = actualPct < targetPct
         ? `You've spent ${actualPct}% of your tracked free time on this — your target is ${targetPct}%, so it's the furthest behind.`
         : `Everything is at or above target — this one benefits most from more time right now.`;
@@ -422,24 +507,18 @@
 
   // ---------- Activity CRUD ----------
 
-  function addActivity(name, percent) {
-    state.activities.push({ id: uid(), name, targetPercent: percent, createdAt: Date.now() });
+  // New activities start with an equal share of everything.
+  function addActivity(name) {
+    state.activities.push({ id: uid(), name, targetPercent: 0, createdAt: Date.now() });
+    state.activities.forEach(a => { a.targetPercent = 100 / state.activities.length; });
     save();
     render();
   }
 
   function editActivity(act) {
     const name = prompt('Activity name:', act.name);
-    if (name === null) return;
-    const pctRaw = prompt('Target percent of your free time:', String(act.targetPercent));
-    if (pctRaw === null) return;
-    const pct = parseInt(pctRaw, 10);
-    if (!name.trim() || !(pct >= 1 && pct <= 100)) {
-      showToast('Invalid name or percent — nothing changed.');
-      return;
-    }
+    if (name === null || !name.trim()) return;
     act.name = name.trim();
-    act.targetPercent = pct;
     save();
     render();
   }
@@ -452,6 +531,7 @@
     if (!confirm(msg)) return;
     state.activities = state.activities.filter(a => a.id !== act.id);
     state.sessions = state.sessions.filter(s => s.activityId !== act.id);
+    normalizeTargets(state.activities);
     save();
     render();
   }
@@ -575,6 +655,7 @@
           throw new Error('bad shape');
         }
         if (!confirm('Replace your current data with the imported file?')) return;
+        normalizeTargets(parsed.activities);
         state = parsed;
         save();
         render();
@@ -593,11 +674,9 @@
   activityForm.addEventListener('submit', e => {
     e.preventDefault();
     const name = newName.value.trim();
-    const pct = parseInt(newPercent.value, 10);
-    if (!name || !(pct >= 1 && pct <= 100)) return;
-    addActivity(name, pct);
+    if (!name) return;
+    addActivity(name);
     newName.value = '';
-    newPercent.value = '';
     newName.focus();
   });
 

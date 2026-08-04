@@ -12,9 +12,10 @@ percentages you chose.
 
 ## How it works
 
-- **Activities** — add each thing you care about with a target percent of your
-  free time. If the percentages don't sum to 100 they're treated
-  proportionally.
+- **Activities** — add each thing you care about. The first activity gets
+  100% of your free time; each new one rebalances everything to equal
+  shares. Drag an activity's slider to change its share — the others adjust
+  proportionally so the split always totals 100%.
 - **Logging** — track free time with the built-in timer (start when you begin,
   stop when you're done) or log sessions manually with quick chips
   (+15m/+30m/+1h/+2h) or a custom number of minutes.
