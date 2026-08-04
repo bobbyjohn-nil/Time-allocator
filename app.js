@@ -50,22 +50,6 @@
     }
   }
 
-  function rebalance(id, value) {
-    const act = state.activities.find(a => a.id === id);
-    if (!act) return;
-    if (state.activities.length === 1) { act.targetPercent = 100; return; }
-    value = Math.max(0, Math.min(100, value));
-    const others = state.activities.filter(a => a.id !== id);
-    const othersSum = others.reduce((a, x) => a + x.targetPercent, 0);
-    const remaining = 100 - value;
-    if (othersSum > 0) {
-      others.forEach(a => { a.targetPercent = a.targetPercent * remaining / othersSum; });
-    } else {
-      others.forEach(a => { a.targetPercent = remaining / others.length; });
-    }
-    act.targetPercent = value;
-  }
-
   // Integer percentages for display that always sum to exactly 100
   // (largest-remainder rounding), keyed by activity id.
   function displayPercents() {
@@ -242,59 +226,122 @@
       return;
     }
 
-    const pcts = displayPercents();
-    const pctLabels = {};
-    const sliders = {};
+    const segEls = {};
+    const segLabels = {};
+    const legendPcts = {};
 
-    // Update every row's slider position and percent label from state,
-    // without rebuilding the DOM (so an in-progress drag isn't interrupted).
-    function syncRows(exceptId) {
+    function refreshPcts() {
       const p = displayPercents();
       state.activities.forEach(a => {
-        if (pctLabels[a.id]) pctLabels[a.id].textContent = `${p[a.id]}%`;
-        if (sliders[a.id] && a.id !== exceptId) sliders[a.id].value = a.targetPercent;
+        segEls[a.id].style.flexGrow = a.targetPercent;
+        segLabels[a.id].textContent = `${p[a.id]}%`;
+        legendPcts[a.id].textContent = `${p[a.id]}%`;
+      });
+      fitSegLabels();
+    }
+
+    // Only show a segment's % label when it actually fits inside the segment.
+    function fitSegLabels() {
+      state.activities.forEach(a => {
+        const seg = segEls[a.id];
+        const lbl = segLabels[a.id];
+        lbl.style.visibility = 'visible';
+        if (lbl.offsetWidth + 10 > seg.clientWidth) lbl.style.visibility = 'hidden';
+        // Pick label ink by segment luminance so it always reads.
+        const rgb = getComputedStyle(seg).backgroundColor.match(/\d+/g);
+        if (rgb) {
+          const lum = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+          lbl.style.color = lum > 0.62 ? '#0b0b0b' : '#ffffff';
+        }
       });
     }
 
-    state.activities.forEach(act => {
-      const row = document.createElement('div');
-      row.className = 'activity-row';
+    // Dragging the divider between two neighbors trades share between
+    // them only; everything else stays put, so the bar stays at 100%.
+    function wireHandle(handle, a, b, bar) {
+      const apply = (aVal, combined) => {
+        a.targetPercent = Math.max(0, Math.min(combined, aVal));
+        b.targetPercent = combined - a.targetPercent;
+        refreshPcts();
+      };
+      handle.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const aStart = a.targetPercent;
+        const combined = a.targetPercent + b.targetPercent;
+        const width = bar.getBoundingClientRect().width;
+        const move = ev => apply(aStart + ((ev.clientX - startX) / width) * 100, combined);
+        const up = () => {
+          document.removeEventListener('pointermove', move);
+          document.removeEventListener('pointerup', up);
+          save();
+          renderBalance();
+          if (!recBox.classList.contains('hidden')) renderRecommendation();
+        };
+        document.addEventListener('pointermove', move);
+        document.addEventListener('pointerup', up);
+      });
+      handle.addEventListener('keydown', e => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        const step = (e.shiftKey ? 5 : 1) * (e.key === 'ArrowRight' ? 1 : -1);
+        apply(a.targetPercent + step, a.targetPercent + b.targetPercent);
+        save();
+        renderBalance();
+      });
+    }
 
-      const name = document.createElement('span');
-      name.className = 'activity-name';
+    const bar = document.createElement('div');
+    bar.className = 'alloc-bar';
+
+    state.activities.forEach((act, i) => {
+      if (i > 0) {
+        const prev = state.activities[i - 1];
+        const handle = document.createElement('div');
+        handle.className = 'alloc-handle';
+        handle.tabIndex = 0;
+        handle.setAttribute('role', 'separator');
+        handle.setAttribute('aria-label', `Boundary between ${prev.name} and ${act.name} — arrow keys to adjust`);
+        const grip = document.createElement('div');
+        grip.className = 'alloc-grip';
+        handle.appendChild(grip);
+        wireHandle(handle, prev, act, bar);
+        bar.appendChild(handle);
+      }
+
+      const seg = document.createElement('div');
+      seg.className = 'alloc-seg';
+      seg.style.background = colorOf(act);
+      seg.style.flexGrow = act.targetPercent;
+      const lbl = document.createElement('span');
+      lbl.className = 'alloc-seg-label';
+      seg.appendChild(lbl);
+      attachTooltip(seg, () => `${act.name} — ${displayPercents()[act.id]}%`);
+      segEls[act.id] = seg;
+      segLabels[act.id] = lbl;
+      bar.appendChild(seg);
+    });
+
+    activityList.appendChild(bar);
+
+    const legend = document.createElement('div');
+    legend.className = 'alloc-legend';
+    state.activities.forEach(act => {
+      const chip = document.createElement('span');
+      chip.className = 'legend-chip';
+
       const sw = document.createElement('span');
       sw.className = 'swatch';
       sw.style.background = colorOf(act);
-      const label = document.createElement('span');
-      label.textContent = act.name;
-      label.title = act.name;
-      name.append(sw, label);
 
-      const slider = document.createElement('input');
-      slider.type = 'range';
-      slider.className = 'activity-slider';
-      slider.min = 0;
-      slider.max = 100;
-      slider.step = 1;
-      slider.value = act.targetPercent;
-      slider.style.accentColor = colorOf(act);
-      slider.setAttribute('aria-label', `${act.name} share of free time`);
-      slider.disabled = state.activities.length === 1;
-      slider.addEventListener('input', () => {
-        rebalance(act.id, parseFloat(slider.value));
-        syncRows(act.id);
-      });
-      slider.addEventListener('change', () => {
-        save();
-        render();
-        if (!recBox.classList.contains('hidden')) renderRecommendation();
-      });
-      sliders[act.id] = slider;
+      const name = document.createElement('span');
+      name.className = 'legend-name';
+      name.textContent = act.name;
+      name.title = act.name;
 
       const pct = document.createElement('span');
-      pct.className = 'activity-pct';
-      pct.textContent = `${pcts[act.id]}%`;
-      pctLabels[act.id] = pct;
+      pct.className = 'legend-pct';
+      legendPcts[act.id] = pct;
 
       const edit = document.createElement('button');
       edit.className = 'icon-btn';
@@ -308,19 +355,15 @@
       del.textContent = '✕';
       del.addEventListener('click', () => deleteActivity(act));
 
-      const meta = document.createElement('div');
-      meta.className = 'activity-meta';
-      const actions = document.createElement('div');
-      actions.className = 'activity-actions';
-      actions.append(edit, del);
-      meta.append(pct, actions);
-
-      row.append(name, slider, meta);
-      activityList.appendChild(row);
+      chip.append(sw, name, pct, edit, del);
+      legend.appendChild(chip);
     });
+    activityList.appendChild(legend);
+
+    requestAnimationFrame(refreshPcts);
 
     targetTotal.textContent = state.activities.length > 1
-      ? 'Drag a slider to change the split — the other activities adjust so it always totals 100%.'
+      ? 'Drag the dividers to push time from one activity into another — the bar always totals 100%.'
       : '';
   }
 
