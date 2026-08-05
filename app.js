@@ -323,6 +323,8 @@
       test: () => ({ done: state.sessions.some(s => new Date(s.timestamp).getHours() < 8) }) },
     { id: 'night-owl', sym: '☾', title: 'Night owl', desc: 'Log a session at 10pm or later.',
       test: () => ({ done: state.sessions.some(s => new Date(s.timestamp).getHours() >= 22) }) },
+    { id: 'nice', sym: '69', title: 'Nice', desc: 'Log exactly 69 minutes in one session.', hidden: true,
+      test: () => ({ done: state.sessions.some(s => s.minutes === 69) }) },
   ];
 
   // Unlocks persist, so deleting old sessions never takes a badge back.
@@ -749,23 +751,25 @@
       const unlockedAt = state.unlocked[a.id];
       if (unlockedAt) unlockedCount += 1;
 
+      const secret = a.hidden && !unlockedAt;
+
       const card = document.createElement('div');
       card.className = 'ach-card' + (unlockedAt ? ' unlocked' : '');
 
       const sym = document.createElement('span');
       sym.className = 'ach-sym';
-      sym.textContent = a.sym;
+      sym.textContent = secret ? '?' : a.sym;
 
       const body = document.createElement('div');
       body.className = 'ach-body';
 
       const title = document.createElement('div');
       title.className = 'ach-title';
-      title.textContent = a.title;
+      title.textContent = secret ? 'Hidden achievement' : a.title;
 
       const desc = document.createElement('div');
       desc.className = 'ach-desc';
-      desc.textContent = a.desc;
+      desc.textContent = secret ? 'A secret achievement — keep logging.' : a.desc;
 
       body.append(title, desc);
 
