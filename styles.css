@@ -142,6 +142,7 @@ h2 { margin: 0 0 12px; font-size: 1.1rem; }
 }
 
 .btn-ghost { background: transparent; color: var(--text-secondary); }
+.btn-danger-ghost:hover { color: var(--danger); border-color: var(--danger); }
 .btn:hover { filter: brightness(1.05); }
 
 .btn-hero {

@@ -1641,6 +1641,18 @@
   });
 
   $('export-btn').addEventListener('click', exportData);
+
+  $('delete-btn').addEventListener('click', () => {
+    const n = state.sessions.length;
+    if (!confirm(`Delete ALL data — ${state.activities.length} activities, ${n} logged session${n === 1 ? '' : 's'}, and every achievement? This cannot be undone. (You can Export first to keep a backup.)`)) return;
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    state = { activities: [], sessions: [], unlocked: {}, settings: {} };
+    focusWeightToggle.checked = false;
+    syncTimerUI();
+    render();
+    showToast('All data deleted.');
+  });
   $('import-input').addEventListener('change', e => {
     if (e.target.files[0]) importData(e.target.files[0]);
     e.target.value = '';
