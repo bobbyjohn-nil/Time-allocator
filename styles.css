@@ -773,32 +773,53 @@ select, input[type="text"], input[type="number"] {
   66%, 100% { transform: scaleX(1); }
 }
 
-/* The arm pivots at the shoulder (bbox top-left + stroke ≈ shoulder
-   joint). Small irregular searching moves with one mid-route look
-   through the glass, then — timed to his arrival at the lamp post at
-   ~4.8s — the glass comes up to the eye and stays there through the
-   badge discovery and reveal. */
-.cs-glass {
+/* Articulated arm: the upper arm rotates about the shoulder joint and
+   the forearm about the elbow, both anchored exactly at their joints
+   (each group's geometry starts at 0,0). Small irregular searching
+   moves with one mid-route look through the glass, then — timed to his
+   arrival at the lamp post at ~4.8s — the elbow folds to bring the
+   glass up to the eye, where it stays through the reveal. */
+.cs-arm,
+.cs-forearm {
   transform-box: fill-box;
-  transform-origin: 4px 4px;
-  animation: cs-search 8.5s linear forwards;
+  transform-origin: 0px 0px;
 }
 
-@keyframes cs-search {
+.cs-arm { animation: cs-arm 8.5s linear forwards; }
+.cs-forearm { animation: cs-forearm 8.5s linear forwards; }
+
+@keyframes cs-arm {
   0% { transform: rotate(0deg); }
-  6% { transform: rotate(-8deg); }
-  11% { transform: rotate(-4deg); }
-  18% { transform: rotate(-10deg); }
+  6% { transform: rotate(-6deg); }
+  11% { transform: rotate(-3deg); }
+  18% { transform: rotate(-8deg); }
   23% { transform: rotate(2deg); }
-  28% { transform: rotate(-70deg); }
-  36% { transform: rotate(-66deg); }
+  28% { transform: rotate(-20deg); }
+  36% { transform: rotate(-18deg); }
+  42% { transform: rotate(-4deg); }
+  48% { transform: rotate(-8deg); }
+  54% { transform: rotate(-3deg); }
+  60% { transform: rotate(-20deg); }
+  66% { transform: rotate(-19deg); }
+  74% { transform: rotate(-21deg); }
+  100% { transform: rotate(-20deg); }
+}
+
+@keyframes cs-forearm {
+  0% { transform: rotate(0deg); }
+  6% { transform: rotate(-6deg); }
+  11% { transform: rotate(-2deg); }
+  18% { transform: rotate(-8deg); }
+  23% { transform: rotate(0deg); }
+  28% { transform: rotate(-95deg); }
+  36% { transform: rotate(-90deg); }
   42% { transform: rotate(-6deg); }
   48% { transform: rotate(-10deg); }
-  54% { transform: rotate(-4deg); }
-  60% { transform: rotate(-72deg); }
-  66% { transform: rotate(-68deg); }
-  74% { transform: rotate(-71deg); }
-  100% { transform: rotate(-69deg); }
+  54% { transform: rotate(-3deg); }
+  60% { transform: rotate(-95deg); }
+  66% { transform: rotate(-92deg); }
+  74% { transform: rotate(-94deg); }
+  100% { transform: rotate(-93deg); }
 }
 
 .cs-puff { animation: cs-puff 1.6s ease-out infinite; }
