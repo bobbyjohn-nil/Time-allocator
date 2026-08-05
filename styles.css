@@ -773,15 +773,32 @@ select, input[type="text"], input[type="number"] {
   66%, 100% { transform: scaleX(1); }
 }
 
+/* The arm pivots at the shoulder (bbox top-left + stroke ≈ shoulder
+   joint). Mostly small irregular searching moves, occasionally raising
+   the glass up to the eye for a closer look. */
 .cs-glass {
   transform-box: fill-box;
-  transform-origin: 20% 80%;
-  animation: cs-sweep 0.5s ease-in-out infinite alternate;
+  transform-origin: 4px 4px;
+  animation: cs-search 7.2s linear infinite;
 }
 
-@keyframes cs-sweep {
-  from { transform: rotate(12deg); }
-  to { transform: rotate(-35deg); }
+@keyframes cs-search {
+  0% { transform: rotate(0deg); }
+  6% { transform: rotate(-8deg); }
+  10% { transform: rotate(-4deg); }
+  18% { transform: rotate(-10deg); }
+  22% { transform: rotate(2deg); }
+  30% { transform: rotate(-2deg); }
+  36% { transform: rotate(-78deg); }
+  46% { transform: rotate(-74deg); }
+  52% { transform: rotate(-6deg); }
+  60% { transform: rotate(0deg); }
+  66% { transform: rotate(-12deg); }
+  72% { transform: rotate(-8deg); }
+  80% { transform: rotate(-80deg); }
+  86% { transform: rotate(-76deg); }
+  92% { transform: rotate(-10deg); }
+  100% { transform: rotate(0deg); }
 }
 
 .cs-puff { animation: cs-puff 1.6s ease-out infinite; }

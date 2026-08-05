@@ -580,12 +580,14 @@
             <path d="M 8 -78 L 9 -75 L 19 -68 L 20 -72 Z" fill="#3a2a1e"/>
             <path d="M 19 -73 L 19 -65 Q 19 -59 24.5 -59 Q 30 -59 30 -65 L 30 -73 Z" fill="#5a4030"/>
             <ellipse cx="24.5" cy="-73" rx="5.5" ry="1.8" fill="#241a12"/>
-            <g class="cs-glass">
-              <line x1="2" y1="-54" x2="14" y2="-42" stroke="#737d92" stroke-width="7.5" stroke-linecap="round"/>
-              <line x1="14" y1="-42" x2="28" y2="-36" stroke="#737d92" stroke-width="6" stroke-linecap="round"/>
-              <circle cx="30" cy="-35" r="3.5" fill="#c9b8a6"/>
-              <line x1="32" y1="-34" x2="36" y2="-32" stroke="#2b3040" stroke-width="3.5" stroke-linecap="round"/>
-              <circle cx="42" cy="-29" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
+            <g transform="translate(2 -54)">
+              <g class="cs-glass">
+                <line x1="0" y1="0" x2="12" y2="12" stroke="#737d92" stroke-width="7.5" stroke-linecap="round"/>
+                <line x1="12" y1="12" x2="26" y2="18" stroke="#737d92" stroke-width="6" stroke-linecap="round"/>
+                <circle cx="28" cy="19" r="3.5" fill="#c9b8a6"/>
+                <line x1="30" y1="20" x2="34" y2="22" stroke="#2b3040" stroke-width="3.5" stroke-linecap="round"/>
+                <circle cx="40" cy="25" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
+              </g>
             </g>
           </g>
         </g>
