@@ -67,6 +67,7 @@
         </div>
       </div>
       <p id="balance-summary" class="hint"></p>
+      <label class="weight-toggle hint"><input type="checkbox" id="focus-weight-toggle"> Weight time by focus (a distracted hour counts as half)</label>
       <div id="balance-chart" class="balance-chart"></div>
     </section>
 
@@ -104,6 +105,12 @@
 
     <!-- ============ HISTORY PAGE ============ -->
     <div id="page-history" class="page" hidden>
+      <section class="card" id="insights-section">
+        <h2>Focus insights</h2>
+        <p id="focus-best" class="hint"></p>
+        <div id="focus-trend" class="focus-trend"></div>
+        <p id="focus-trend-empty" class="hint"></p>
+      </section>
       <section class="card" id="history-section">
         <h2>History</h2>
         <p id="history-summary" class="hint"></p>

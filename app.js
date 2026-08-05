@@ -23,11 +23,12 @@
         if (Array.isArray(parsed.activities) && Array.isArray(parsed.sessions)) {
           normalizeTargets(parsed.activities);
           if (typeof parsed.unlocked !== 'object' || !parsed.unlocked) parsed.unlocked = {};
+          if (typeof parsed.settings !== 'object' || !parsed.settings) parsed.settings = {};
           return parsed;
         }
       }
     } catch (e) { /* corrupted storage falls through to fresh state */ }
-    return { activities: [], sessions: [], unlocked: {} };
+    return { activities: [], sessions: [], unlocked: {}, settings: {} };
   }
 
   function save() {
@@ -151,13 +152,13 @@
   // so they always behave proportionally even if they don't sum to 100.
   function computeStats() {
     const sessions = windowSessions();
-    const totalMins = sessions.reduce((a, s) => a + s.minutes, 0);
+    const totalMins = sessions.reduce((a, s) => a + sessionEffective(s), 0);
     const targetSum = state.activities.reduce((a, x) => a + x.targetPercent, 0);
 
     const stats = state.activities.map(act => {
       const spent = sessions
         .filter(s => s.activityId === act.id)
-        .reduce((a, s) => a + s.minutes, 0);
+        .reduce((a, s) => a + sessionEffective(s), 0);
       const targetShare = targetSum > 0 ? act.targetPercent / targetSum : 0;
       const actualShare = totalMins > 0 ? spent / totalMins : 0;
       const lastDone = state.sessions
@@ -298,6 +299,78 @@
     4: { sym: '●', label: 'Locked in' },
   };
 
+  // How much of a session "counts" when weighting by focus; unrated
+  // sessions count in full.
+  const FOCUS_WEIGHT = { 1: 0.5, 2: 0.75, 3: 0.9, 4: 1 };
+
+  function sessionEffective(s) {
+    return state.settings.focusWeighted ? s.minutes * (FOCUS_WEIGHT[s.focus] || 1) : s.minutes;
+  }
+
+  // Average focus rating for an activity (needs 2+ rated sessions).
+  function activityFocusAvg(actId) {
+    const rated = state.sessions.filter(s => s.activityId === actId && s.focus);
+    if (rated.length < 2) return null;
+    return rated.reduce((a, s) => a + s.focus, 0) / rated.length;
+  }
+
+  function focusHabit(avg) {
+    if (avg >= 3.5) return { sym: '●', text: 'usually locked in' };
+    if (avg >= 2.75) return { sym: '◕', text: 'mostly focused' };
+    if (avg >= 1.75) return { sym: '◑', text: 'often in and out' };
+    return { sym: '○', text: 'usually distracted' };
+  }
+
+  // ---------- Best-hours detection ----------
+
+  const HOUR_BANDS = [
+    { key: 'morning', label: 'in the morning', from: 5, to: 12 },
+    { key: 'afternoon', label: 'in the afternoon', from: 12, to: 17 },
+    { key: 'evening', label: 'in the evening', from: 17, to: 22 },
+    { key: 'night', label: 'late at night', from: 22, to: 29 }, // wraps past midnight
+  ];
+
+  function bandOf(hour) {
+    if (hour < 5) hour += 24;
+    return HOUR_BANDS.find(b => hour >= b.from && hour < b.to);
+  }
+
+  // Average focus per time-of-day band; a band needs 3+ rated sessions.
+  function bandAverages() {
+    const acc = {};
+    state.sessions.filter(s => s.focus).forEach(s => {
+      const key = bandOf(new Date(s.timestamp).getHours()).key;
+      (acc[key] = acc[key] || []).push(s.focus);
+    });
+    const out = {};
+    for (const k in acc) {
+      if (acc[k].length >= 3) out[k] = acc[k].reduce((a, b) => a + b, 0) / acc[k].length;
+    }
+    return out;
+  }
+
+  // Best and worst bands, only when 2+ bands have enough data to compare.
+  function focusBands() {
+    const avgs = bandAverages();
+    const keys = Object.keys(avgs).sort((a, b) => avgs[b] - avgs[a]);
+    if (keys.length < 2) return null;
+    return {
+      best: HOUR_BANDS.find(b => b.key === keys[0]),
+      worst: HOUR_BANDS.find(b => b.key === keys[keys.length - 1]),
+      avgs,
+    };
+  }
+
+  // A week whose 5+ rated sessions average Mostly focused or better.
+  function hadFocusedWeek() {
+    const byWeek = {};
+    state.sessions.filter(s => s.focus).forEach(s => {
+      const k = startOfWeek(new Date(s.timestamp)).getTime();
+      (byWeek[k] = byWeek[k] || []).push(s.focus);
+    });
+    return Object.values(byWeek).some(v => v.length >= 5 && v.reduce((a, b) => a + b, 0) / v.length >= 3);
+  }
+
   const ACHIEVEMENTS = [
     { id: 'first-session', sym: '★', title: 'First step', desc: 'Log your first session.',
       test: () => ({ done: state.sessions.length >= 1 }) },
@@ -323,6 +396,13 @@
       test: () => ({ done: state.sessions.some(s => new Date(s.timestamp).getHours() < 8) }) },
     { id: 'night-owl', sym: '☾', title: 'Night owl', desc: 'Log a session at 10pm or later.',
       test: () => ({ done: state.sessions.some(s => new Date(s.timestamp).getHours() >= 22) }) },
+    { id: 'self-aware', sym: '∗', title: 'Self aware', desc: 'Rate 10 sessions.',
+      test: () => {
+        const n = state.sessions.filter(s => s.focus).length;
+        return { done: n >= 10, progress: `${Math.min(n, 10)} / 10` };
+      } },
+    { id: 'in-the-zone', sym: '◉', title: 'In the zone', desc: 'Average Mostly focused or better across 5+ rated sessions in one week.',
+      test: () => ({ done: hadFocusedWeek() }) },
     { id: 'nice', sym: '69', title: 'Nice', desc: 'Log exactly 69 minutes in one session.', hidden: true,
       test: () => ({ done: state.sessions.some(s => s.minutes === 69) }) },
   ];
@@ -414,6 +494,10 @@
   const historySummary = $('history-summary');
   const achGrid = $('ach-grid');
   const achSummary = $('ach-summary');
+  const focusBest = $('focus-best');
+  const focusTrend = $('focus-trend');
+  const focusTrendEmpty = $('focus-trend-empty');
+  const focusWeightToggle = $('focus-weight-toggle');
   const tooltip = $('tooltip');
   const toast = $('toast');
   const focusOverlay = $('focus-overlay');
@@ -425,8 +509,57 @@
     renderSelects();
     renderBalance();
     renderHistory();
+    renderInsights();
     checkAchievements(false);
     renderAchievements();
+  }
+
+  function renderInsights() {
+    const bands = focusBands();
+    focusBest.textContent = bands
+      ? `You're most locked in ${bands.best.label} (avg ${bands.avgs[bands.best.key].toFixed(1)} of 4) and most distracted ${bands.worst.label} (avg ${bands.avgs[bands.worst.key].toFixed(1)}).`
+      : 'Rate sessions at different times of day and the site will learn when you focus best.';
+
+    focusTrend.innerHTML = '';
+    const weekMs = 7 * 86400000;
+    const thisWeek = startOfWeek(new Date()).getTime();
+    const weeks = [];
+    for (let i = 7; i >= 0; i--) {
+      const start = thisWeek - i * weekMs;
+      const rated = state.sessions.filter(s => s.focus && s.timestamp >= start && s.timestamp < start + weekMs);
+      weeks.push({
+        start,
+        n: rated.length,
+        avg: rated.length ? rated.reduce((a, s) => a + s.focus, 0) / rated.length : null,
+      });
+    }
+
+    if (weeks.filter(w => w.avg !== null).length < 2) {
+      focusTrendEmpty.textContent = 'Rate sessions in at least two different weeks to see your focus trend.';
+      return;
+    }
+
+    focusTrendEmpty.textContent = 'Average focus per week (1 = distracted, 4 = locked in).';
+    weeks.forEach(w => {
+      const col = document.createElement('div');
+      col.className = 'trend-col';
+      const wrap = document.createElement('div');
+      wrap.className = 'trend-bar-wrap';
+      if (w.avg !== null) {
+        const bar = document.createElement('div');
+        bar.className = 'trend-bar';
+        bar.style.height = `${(w.avg / 4) * 100}%`;
+        wrap.appendChild(bar);
+        attachTooltip(wrap, () =>
+          `Week of ${new Date(w.start).toLocaleDateString([], { month: 'short', day: 'numeric' })} — avg ${w.avg.toFixed(1)} of 4 (${w.n} rated session${w.n === 1 ? '' : 's'})`
+        );
+      }
+      const label = document.createElement('span');
+      label.className = 'trend-label';
+      label.textContent = new Date(w.start).toLocaleDateString([], { month: 'short', day: 'numeric' });
+      col.append(wrap, label);
+      focusTrend.appendChild(col);
+    });
   }
 
   function renderActivities() {
@@ -675,9 +808,10 @@
     }
 
     const rangeLabel = range === 'week' ? 'this week' : range === '7d' ? 'in the last 7 days' : 'in total';
+    const kind = state.settings.focusWeighted ? 'focus-weighted time' : 'free time';
     balanceSummary.textContent = totalMins === 0
       ? `Nothing tracked ${rangeLabel} yet.`
-      : `${fmtDuration(totalMins)} of free time tracked ${rangeLabel}.`;
+      : `${fmtDuration(totalMins)} of ${kind} tracked ${rangeLabel}.`;
 
     // Axis max: largest of target/actual shares, padded to the next 10%.
     const maxShare = Math.max(
@@ -702,6 +836,16 @@
       sw.className = 'swatch';
       sw.style.background = colorOf(stat.activity);
       name.append(sw, document.createTextNode(stat.activity.name));
+
+      const focusAvg = activityFocusAvg(stat.activity.id);
+      if (focusAvg !== null) {
+        const habit = focusHabit(focusAvg);
+        const habitEl = document.createElement('span');
+        habitEl.className = 'balance-focus';
+        habitEl.textContent = `${habit.sym} ${habit.text}`;
+        habitEl.title = `Average focus ${focusAvg.toFixed(1)} of 4 across rated sessions`;
+        name.appendChild(habitEl);
+      }
 
       const values = document.createElement('span');
       values.className = 'balance-values';
@@ -922,6 +1066,25 @@
       return;
     }
 
+    // With enough focus data, order the plan around how you focus at this
+    // hour: hardest first in your best hours, easiest first in your worst.
+    const bands = focusBands();
+    let orderNote = '';
+    if (bands && blocks.length > 1 && blocks.some(b => activityFocusAvg(b.activity.id) !== null)) {
+      const nowBand = bandOf(new Date().getHours());
+      const avgOf = b => {
+        const a = activityFocusAvg(b.activity.id);
+        return a === null ? 2.5 : a;
+      };
+      if (nowBand.key === bands.best.key) {
+        blocks.sort((a, b) => avgOf(a) - avgOf(b));
+        orderNote = `You're usually most locked in ${nowBand.label}, so the plan starts with what you find hardest to focus on.`;
+      } else if (nowBand.key === bands.worst.key) {
+        blocks.sort((a, b) => avgOf(b) - avgOf(a));
+        orderNote = `Your focus usually dips ${nowBand.label}, so the plan starts with what you focus on best.`;
+      }
+    }
+
     const headline = document.createElement('div');
     headline.className = 'rec-headline';
     headline.textContent = `Your plan for ${fmtDuration(X)}`;
@@ -966,7 +1129,15 @@
       makeLogButton(blocks, 'Log the whole plan')
     );
 
-    recBox.append(headline, reason, planBar, list, actions);
+    recBox.append(headline, reason, planBar, list);
+    if (orderNote) {
+      const note = document.createElement('p');
+      note.className = 'hint';
+      note.style.marginBottom = '12px';
+      note.textContent = orderNote;
+      recBox.appendChild(note);
+    }
+    recBox.appendChild(actions);
   }
 
   function makeStartTimerButton(act, label) {
@@ -1117,16 +1288,31 @@
   }
 
   function resolveFocus(level) {
-    if (level && focusPendingIds) {
-      focusPendingIds.forEach(id => {
-        const s = state.sessions.find(x => x.id === id);
-        if (s) s.focus = level;
-      });
-      save();
-      render();
-    }
+    const ids = focusPendingIds;
     focusPendingIds = null;
     focusOverlay.hidden = true;
+    if (!level || !ids) return;
+    ids.forEach(id => {
+      const s = state.sessions.find(x => x.id === id);
+      if (s) s.focus = level;
+    });
+    save();
+    render();
+    maybeNudge(level, ids);
+  }
+
+  // Two distracted sessions of the same activity in a row earns a nudge.
+  function maybeNudge(level, ids) {
+    if (level !== 1 || !ids.length) return;
+    const s = state.sessions.find(x => x.id === ids[0]);
+    if (!s) return;
+    const prev = state.sessions
+      .filter(x => x.activityId === s.activityId && x.focus && x.id !== s.id && x.timestamp <= s.timestamp)
+      .sort((a, b) => b.timestamp - a.timestamp)[0];
+    if (prev && prev.focus === 1) {
+      const act = state.activities.find(a => a.id === s.activityId);
+      setTimeout(() => showToast(`Two distracted ${act ? act.name + ' ' : ''}sessions in a row — maybe switch to something else for a while?`), 900);
+    }
   }
 
   // ---------- Timer ----------
@@ -1333,6 +1519,13 @@
     });
   });
 
+  focusWeightToggle.addEventListener('change', () => {
+    state.settings.focusWeighted = focusWeightToggle.checked;
+    save();
+    renderBalance();
+    if (!recBox.classList.contains('hidden')) renderRecommendation();
+  });
+
   $('export-btn').addEventListener('click', exportData);
   $('import-input').addEventListener('change', e => {
     if (e.target.files[0]) importData(e.target.files[0]);
@@ -1341,6 +1534,7 @@
 
   // ---------- Init ----------
 
+  focusWeightToggle.checked = !!state.settings.focusWeighted;
   checkAchievements(true); // no toast spam for badges earned before this visit
   render();
   syncTimerUI();

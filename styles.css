@@ -319,6 +319,21 @@ select, input[type="text"], input[type="number"] {
 .balance-values { color: var(--text-secondary); font-size: 0.85rem; }
 .balance-values .ahead { color: var(--good); }
 
+.balance-focus {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.weight-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
 .balance-track {
   position: relative;
   height: 16px;
@@ -574,6 +589,48 @@ select, input[type="text"], input[type="number"] {
 
 .footer-note { color: var(--text-muted); font-size: 0.8rem; margin-left: auto; }
 .file-label { display: inline-block; }
+
+/* ---------- Focus insights ---------- */
+.focus-trend {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+  margin: 12px 0 8px;
+}
+
+.trend-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.trend-bar-wrap {
+  height: 56px;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-bottom: 1px solid var(--baseline);
+}
+
+.trend-bar {
+  width: 100%;
+  max-width: 24px;
+  background: var(--accent);
+  border-radius: 4px 4px 0 0;
+}
+
+.trend-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
 
 /* ---------- Confetti ---------- */
 .confetti {
