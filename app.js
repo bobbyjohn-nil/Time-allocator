@@ -403,7 +403,8 @@
       } },
     { id: 'in-the-zone', sym: '◉', title: 'In the zone', desc: 'Average Mostly focused or better across 5+ rated sessions in one week.',
       test: () => ({ done: hadFocusedWeek() }) },
-    { id: 'nice', sym: '69', title: 'Nice', desc: 'Log exactly 69 minutes in one session.', hidden: true,
+    { id: 'nice', sym: '⌕', title: 'Nice', desc: 'Log exactly 69 minutes in one session.', hidden: true,
+      symSvg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="21" y2="21"/></svg>',
       test: () => ({ done: state.sessions.some(s => s.minutes === 69) }) },
   ];
 
@@ -429,7 +430,7 @@
         if (niceJustUnlocked) {
           playNiceCutscene(() => {
             celebrate();
-            showToast('Achievement unlocked: 69 Nice — Log exactly 69 minutes in one session.');
+            showToast('Achievement unlocked: Nice — Log exactly 69 minutes in one session.');
           });
         } else {
           celebrate();
@@ -477,58 +478,74 @@
   <g class="cs-float f2">
     <rect x="486" y="130" width="20" height="20" fill="#182246" opacity="0.5" transform="rotate(35 496 140)"/>
   </g>
+  <rect x="-400" y="245" width="1600" height="700" fill="#0b0f1d"/>
+  <rect x="-400" y="242" width="1600" height="5" fill="#161c33"/>
   <g fill="#10152a">
-    <polygon points="-60,410 30,170 90,260 130,410"/>
-    <polygon points="140,410 200,140 260,410"/>
-    <polygon points="250,410 300,220 340,180 380,410"/>
-    <polygon points="620,410 660,150 700,240 740,410"/>
-    <polygon points="720,410 780,180 830,240 900,410"/>
+    <polygon points="-400,450 -400,140 -80,150 180,215 345,248 345,450"/>
+    <polygon points="1200,450 1200,140 880,150 620,215 455,248 455,450"/>
+  </g>
+  <g fill="#151d3a" opacity="0.85">
+    <polygon points="90,450 150,190 235,242 265,450"/>
+    <polygon points="710,450 650,190 565,242 535,450"/>
   </g>
   <g fill="#2a3352" opacity="0.85">
-    <rect x="55" y="250" width="10" height="14" transform="rotate(8 60 257)"/>
-    <rect x="195" y="200" width="10" height="14" transform="rotate(-6 200 207)"/>
-    <rect x="305" y="240" width="10" height="14" transform="rotate(10 310 247)"/>
-    <rect x="660" y="220" width="10" height="14" transform="rotate(-8 665 227)"/>
-    <rect x="770" y="250" width="10" height="14" transform="rotate(6 775 257)"/>
+    <rect x="140" y="230" width="10" height="14" transform="rotate(8 145 237)"/>
+    <rect x="215" y="270" width="10" height="14" transform="rotate(-6 220 277)"/>
+    <rect x="105" y="320" width="12" height="16" transform="rotate(10 111 328)"/>
+    <rect x="645" y="230" width="10" height="14" transform="rotate(-8 650 237)"/>
+    <rect x="580" y="280" width="10" height="14" transform="rotate(6 585 287)"/>
+    <rect x="690" y="330" width="12" height="16" transform="rotate(-10 696 338)"/>
   </g>
-  <rect x="-400" y="410" width="1600" height="240" fill="#0c101f"/>
-  <rect x="-400" y="406" width="1600" height="6" fill="#161c33"/>
+  <polygon points="368,248 432,248 720,450 80,450" fill="#0c101f"/>
+  <g fill="#1a2342">
+    <rect x="397" y="268" width="5" height="12"/>
+    <rect x="393" y="298" width="7" height="16"/>
+    <rect x="387" y="336" width="9" height="20"/>
+    <rect x="379" y="384" width="12" height="26"/>
+  </g>
   <g class="cs-flicker">
-    <polygon points="560,120 480,410 640,410" fill="url(#csLight)"/>
-    <ellipse cx="560" cy="410" rx="95" ry="12" fill="#f5d98b" opacity="0.25"/>
-    <circle cx="560" cy="116" r="10" fill="#ffe9a8"/>
+    <polygon points="620,150 500,435 740,435" fill="url(#csLight)"/>
+    <ellipse cx="615" cy="432" rx="110" ry="13" fill="#f5d98b" opacity="0.25"/>
+    <circle cx="620" cy="146" r="11" fill="#ffe9a8"/>
   </g>
   <g fill="#232a44">
-    <rect x="556" y="120" width="8" height="290"/>
-    <rect x="544" y="404" width="32" height="8" rx="2"/>
-    <rect x="546" y="104" width="28" height="10" rx="4"/>
+    <rect x="615" y="150" width="9" height="282"/>
+    <rect x="600" y="426" width="38" height="9" rx="2"/>
+    <rect x="603" y="132" width="34" height="12" rx="5"/>
   </g>
-  <g class="cs-badge" transform="translate(505 392)">
+  <g class="cs-badge" transform="translate(520 402)">
     <rect x="-16" y="-12" width="32" height="24" rx="6" fill="#2a78d6"/>
-    <text x="0" y="6" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">69</text>
+    <circle cx="-3" cy="-2" r="5.5" fill="none" stroke="#ffffff" stroke-width="2.2"/>
+    <line x1="1.5" y1="2.5" x2="8" y2="8" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
   </g>
-  <g class="cs-detective">
-    <g class="cs-flip">
-      <g class="cs-bob">
-        <g transform="translate(0 408)">
-          <rect x="-14" y="-12" width="10" height="12" fill="#151b30"/>
-          <rect x="4" y="-12" width="10" height="12" fill="#151b30"/>
-          <path d="M -22 0 L -27 -38 L -20 -58 Q 0 -70 20 -58 L 27 -38 L 22 0 Q 0 6 -22 0 Z" fill="#1d2440"/>
-          <path d="M -20 -58 L -13 -86 L -1 -62 Z" fill="#242e52"/>
-          <path d="M 20 -58 L 13 -86 L 1 -62 Z" fill="#242e52"/>
-          <rect x="-12" y="-86" width="24" height="10" fill="#0b0f1c"/>
-          <rect x="-20" y="-91" width="40" height="5" rx="2.5" fill="#151b30"/>
-          <rect x="-12" y="-104" width="24" height="14" rx="3" fill="#151b30"/>
-          <g class="cs-smoke" fill="#9aa7c9">
-            <circle cx="24" cy="-90" r="2" class="cs-puff"/>
-            <circle cx="27" cy="-97" r="2.5" class="cs-puff p2"/>
-            <circle cx="30" cy="-105" r="3" class="cs-puff p3"/>
-          </g>
-          <line x1="6" y1="-79" x2="18" y2="-74" stroke="#3a2a1c" stroke-width="3.5" stroke-linecap="round"/>
-          <rect x="15" y="-81" width="7" height="8" rx="2" fill="#3a2a1c"/>
-          <g class="cs-glass">
-            <line x1="12" y1="-44" x2="32" y2="-36" stroke="#1d2440" stroke-width="5" stroke-linecap="round"/>
-            <circle cx="40" cy="-32" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
+  <g class="cs-approach">
+    <g class="cs-dart">
+      <g class="cs-flip">
+        <g class="cs-bob">
+          <g>
+            <polygon points="-14,0 -7,-16 -1,-16 -7,0" fill="#151b30"/>
+            <polygon points="5,0 2,-16 9,-16 15,0" fill="#151b30"/>
+            <path d="M -13 -30 L -32 -16 L -13 -8 Z" fill="#1a2140"/>
+            <path d="M -13 -2 L -17 -34 L 13 -34 L 16 -2 Q 0 4 -13 -2 Z" fill="#1d2440"/>
+            <path d="M -19 -34 L -13 -60 Q 2 -68 15 -61 L 21 -34 Q 0 -26 -19 -34 Z" fill="#232c4d"/>
+            <path d="M -10 -60 L -8 -80 L 6 -62 Z" fill="#2a3560"/>
+            <path d="M 14 -60 L 20 -78 L 4 -62 Z" fill="#2a3560"/>
+            <rect x="-4" y="-78" width="20" height="7" fill="#0b0f1c"/>
+            <path d="M -12 -78 Q 3 -98 18 -78 Z" fill="#151b30"/>
+            <path d="M 16 -79 L 28 -75 L 14 -72 Z" fill="#151b30"/>
+            <path d="M -10 -79 L -22 -75 L -8 -72 Z" fill="#151b30"/>
+            <circle cx="3" cy="-94" r="2" fill="#232c4d"/>
+            <g class="cs-smoke" fill="#9aa7c9">
+              <circle cx="28" cy="-76" r="2" class="cs-puff"/>
+              <circle cx="32" cy="-85" r="2.5" class="cs-puff p2"/>
+              <circle cx="36" cy="-94" r="3" class="cs-puff p3"/>
+            </g>
+            <path d="M 14 -73 Q 20 -70 23 -64" stroke="#3a2a1c" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <rect x="20" y="-66" width="8" height="9" rx="3" fill="#3a2a1c"/>
+            <g class="cs-glass">
+              <line x1="10" y1="-38" x2="30" y2="-32" stroke="#1d2440" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="38" cy="-28" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
+            </g>
           </g>
         </g>
       </g>
@@ -546,7 +563,7 @@
     overlay.className = 'cutscene';
     overlay.innerHTML = NICE_CUTSCENE_SVG +
       '<div class="cutscene-reveal">' +
-      '<div class="cutscene-badge">69</div>' +
+      '<div class="cutscene-badge"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="21" y2="21"/></svg></div>' +
       '<div class="cutscene-title">NICE.</div>' +
       '<div class="cutscene-sub">Achievement found: log exactly 69 minutes.</div>' +
       '</div>' +
@@ -1091,7 +1108,13 @@
 
       const sym = document.createElement('span');
       sym.className = 'ach-sym';
-      sym.textContent = secret ? '?' : a.sym;
+      if (secret) {
+        sym.textContent = '?';
+      } else if (a.symSvg) {
+        sym.innerHTML = a.symSvg;
+      } else {
+        sym.textContent = a.sym;
+      }
 
       const body = document.createElement('div');
       body.className = 'ach-body';

@@ -683,17 +683,17 @@ select, input[type="text"], input[type="number"] {
 }
 
 @keyframes cs-camera {
-  0% { transform: translate(400px, 225px) rotate(0deg) scale(1.05) translate(-400px, -280px); }
-  9% { transform: translate(400px, 225px) rotate(-3deg) scale(1.35) translate(-300px, -370px); }
-  14% { transform: translate(400px, 225px) rotate(2deg) scale(1.5) translate(-300px, -370px); }
-  23% { transform: translate(400px, 225px) rotate(-5deg) scale(1.6) translate(-110px, -370px); }
-  28% { transform: translate(400px, 225px) rotate(3deg) scale(1.8) translate(-90px, -370px); }
-  37% { transform: translate(400px, 225px) rotate(-6deg) scale(1.9) translate(-430px, -370px); }
-  41% { transform: translate(400px, 225px) rotate(4deg) scale(2.1) translate(-420px, -378px); }
-  57% { transform: translate(400px, 225px) rotate(-2deg) scale(2.4) translate(-470px, -380px); }
-  64% { transform: translate(400px, 225px) rotate(1deg) scale(2.9) translate(-495px, -385px); }
-  72% { transform: translate(400px, 225px) rotate(-1deg) scale(3.3) translate(-500px, -388px); }
-  100% { transform: translate(400px, 225px) rotate(0deg) scale(3.4) translate(-500px, -388px); }
+  0% { transform: translate(400px, 225px) rotate(0deg) scale(1.1) translate(-400px, -300px); }
+  9% { transform: translate(400px, 225px) rotate(-3deg) scale(1.2) translate(-436px, -290px); }
+  14% { transform: translate(400px, 225px) rotate(2deg) scale(1.3) translate(-443px, -292px); }
+  23% { transform: translate(400px, 225px) rotate(-4deg) scale(1.35) translate(-345px, -300px); }
+  28% { transform: translate(400px, 225px) rotate(3deg) scale(1.5) translate(-338px, -305px); }
+  37% { transform: translate(400px, 225px) rotate(-5deg) scale(1.55) translate(-461px, -330px); }
+  41% { transform: translate(400px, 225px) rotate(4deg) scale(1.7) translate(-430px, -340px); }
+  57% { transform: translate(400px, 225px) rotate(-2deg) scale(1.8) translate(-465px, -380px); }
+  64% { transform: translate(400px, 225px) rotate(1deg) scale(2.2) translate(-495px, -390px); }
+  72% { transform: translate(400px, 225px) rotate(-1deg) scale(2.6) translate(-500px, -392px); }
+  100% { transform: translate(400px, 225px) rotate(0deg) scale(2.7) translate(-500px, -392px); }
 }
 
 .cs-float {
@@ -731,19 +731,31 @@ select, input[type="text"], input[type="number"] {
   72% { opacity: 1; }
 }
 
-.cs-detective { animation: cs-dart 4.8s ease-in-out forwards; }
+/* Depth: the detective walks the receding road toward the camera,
+   growing from a distant speck to full size in the foreground. */
+.cs-approach { animation: cs-approach 4.8s linear forwards; }
 
-/* Dart around the street: dash right, double back, overshoot the lamp,
-   then settle next to the badge. */
+@keyframes cs-approach {
+  0% { transform: translate(400px, 250px) scale(0.22); }
+  20% { transform: translate(400px, 268px) scale(0.3); }
+  45% { transform: translate(400px, 298px) scale(0.48); }
+  70% { transform: translate(405px, 340px) scale(0.72); }
+  100% { transform: translate(400px, 405px) scale(1.1); }
+}
+
+/* Lateral darting across the road (in road-local units, so the sweeps
+   grow as he gets closer). */
+.cs-dart { animation: cs-dart 4.8s ease-in-out forwards; }
+
 @keyframes cs-dart {
-  0% { transform: translateX(-60px); }
-  16% { transform: translateX(300px); }
-  24% { transform: translateX(300px); }
-  40% { transform: translateX(90px); }
-  48% { transform: translateX(90px); }
-  64% { transform: translateX(470px); }
-  72% { transform: translateX(410px); }
-  100% { transform: translateX(440px); }
+  0% { transform: translateX(-80px); }
+  16% { transform: translateX(120px); }
+  24% { transform: translateX(120px); }
+  40% { transform: translateX(-120px); }
+  48% { transform: translateX(-120px); }
+  64% { transform: translateX(90px); }
+  72% { transform: translateX(40px); }
+  100% { transform: translateX(55px); }
 }
 
 /* Face the direction of travel (mirrors the whole figure). */
