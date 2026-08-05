@@ -334,7 +334,7 @@
       if (a.test().done && !state.unlocked[a.id]) {
         state.unlocked[a.id] = Date.now();
         changed = true;
-        if (!silent) showToast(`Achievement unlocked: ${a.sym} ${a.title}`);
+        if (!silent) showToast(`Achievement unlocked: ${a.sym} ${a.title} — ${a.desc}`);
       }
     });
     if (changed) {
@@ -378,11 +378,11 @@
           { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
           { transform: `translate(${dx * 0.7}px, ${dy * 0.7}px) rotate(${rot * 0.5}deg)`, opacity: 1, offset: 0.35 },
           { transform: `translate(${dx}px, ${dy + fall}px) rotate(${rot}deg)`, opacity: 0 },
-        ], { duration: 1300 + Math.random() * 900, easing: 'cubic-bezier(0.15, 0.6, 0.35, 1)' });
+        ], { duration: 2800 + Math.random() * 1600, easing: 'cubic-bezier(0.15, 0.6, 0.35, 1)' });
       }
     });
 
-    setTimeout(() => container.remove(), 2400);
+    setTimeout(() => container.remove(), 4600);
   }
 
   // ---------- DOM refs ----------
@@ -1219,7 +1219,7 @@
     toast.textContent = msg;
     toast.hidden = false;
     clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => { toast.hidden = true; }, 2500);
+    toastTimeout = setTimeout(() => { toast.hidden = true; }, 4000);
   }
 
   // ---------- Export / import ----------
