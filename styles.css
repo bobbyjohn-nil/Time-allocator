@@ -980,13 +980,20 @@ select, input[type="text"], input[type="number"] {
   position: fixed;
   bottom: 24px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(8px);
   background: var(--text-primary);
   color: var(--page);
   padding: 10px 18px;
   border-radius: 8px;
   font-size: 0.9rem;
   z-index: 20;
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 @media (max-width: 480px) {

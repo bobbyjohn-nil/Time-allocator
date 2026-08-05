@@ -1708,11 +1708,18 @@
   }
 
   let toastTimeout = null;
+  let toastHideTimeout = null;
   function showToast(msg) {
+    clearTimeout(toastTimeout);
+    clearTimeout(toastHideTimeout);
     toast.textContent = msg;
     toast.hidden = false;
-    clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => { toast.hidden = true; }, 4000);
+    void toast.offsetWidth; // let the hidden->visible frame land so the fade runs
+    toast.classList.add('show');
+    toastTimeout = setTimeout(() => {
+      toast.classList.remove('show');
+      toastHideTimeout = setTimeout(() => { toast.hidden = true; }, 400);
+    }, 4000);
   }
 
   // ---------- Export / import ----------
