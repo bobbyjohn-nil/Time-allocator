@@ -840,6 +840,33 @@ select, input[type="text"], input[type="number"] {
   box-shadow: 0 0 40px rgba(90, 150, 255, 0.55);
 }
 
+/* A glare sweeping across the badge as it's pulled up into the light. */
+.cutscene-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cutscene-shine::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -60%;
+  width: 40%;
+  height: 140%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  transform: skewX(-20deg);
+  animation: cs-shine 1.6s ease-in-out 6.4s 2;
+}
+
+@keyframes cs-shine {
+  0% { left: -60%; }
+  60% { left: 120%; }
+  100% { left: 120%; }
+}
+
 /* Fresh out of the puddle: water dripping off the lifted badge. */
 .cutscene-drip {
   position: absolute;

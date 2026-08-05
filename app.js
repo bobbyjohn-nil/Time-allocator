@@ -602,6 +602,7 @@
     overlay.innerHTML = NICE_CUTSCENE_SVG +
       '<div class="cutscene-reveal">' +
       '<div class="cutscene-badge"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="21" y2="21"/></svg>' +
+      '<span class="cutscene-shine"></span>' +
       '<span class="cutscene-drip d1"></span><span class="cutscene-drip d2"></span><span class="cutscene-drip d3"></span></div>' +
       '<div class="cutscene-title">NICE.</div>' +
       '<div class="cutscene-sub">Achievement found: log exactly 69 minutes.</div>' +
