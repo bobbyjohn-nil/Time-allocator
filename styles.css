@@ -575,6 +575,21 @@ select, input[type="text"], input[type="number"] {
 .footer-note { color: var(--text-muted); font-size: 0.8rem; margin-left: auto; }
 .file-label { display: inline-block; }
 
+/* ---------- Confetti ---------- */
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
 /* ---------- Tooltip & toast ---------- */
 .tooltip {
   position: fixed;

@@ -337,7 +337,52 @@
         if (!silent) showToast(`Achievement unlocked: ${a.sym} ${a.title}`);
       }
     });
-    if (changed) save();
+    if (changed) {
+      save();
+      if (!silent) celebrate();
+    }
+  }
+
+  // Two party poppers of confetti from the bottom corners.
+  function celebrate() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const container = document.createElement('div');
+    container.className = 'confetti';
+    document.body.appendChild(container);
+
+    const bursts = [
+      { x: 0, y: window.innerHeight, angle: -60 },
+      { x: window.innerWidth, y: window.innerHeight, angle: -120 },
+    ];
+
+    bursts.forEach(b => {
+      for (let i = 0; i < 45; i++) {
+        const p = document.createElement('div');
+        p.className = 'confetti-piece';
+        p.style.background = `var(--series-${(i % SERIES_SLOTS) + 1})`;
+        const w = 5 + Math.random() * 6;
+        p.style.width = `${w}px`;
+        p.style.height = `${Math.random() < 0.5 ? w : w * 0.4}px`;
+        if (Math.random() < 0.3) p.style.borderRadius = '50%';
+        p.style.left = `${b.x}px`;
+        p.style.top = `${b.y}px`;
+        container.appendChild(p);
+
+        const angle = (b.angle + (Math.random() - 0.5) * 55) * Math.PI / 180;
+        const velocity = 350 + Math.random() * 500;
+        const dx = Math.cos(angle) * velocity;
+        const dy = Math.sin(angle) * velocity;
+        const fall = 300 + Math.random() * 350;
+        const rot = (Math.random() - 0.5) * 1080;
+        p.animate([
+          { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
+          { transform: `translate(${dx * 0.7}px, ${dy * 0.7}px) rotate(${rot * 0.5}deg)`, opacity: 1, offset: 0.35 },
+          { transform: `translate(${dx}px, ${dy + fall}px) rotate(${rot}deg)`, opacity: 0 },
+        ], { duration: 1300 + Math.random() * 900, easing: 'cubic-bezier(0.15, 0.6, 0.35, 1)' });
+      }
+    });
+
+    setTimeout(() => container.remove(), 2400);
   }
 
   // ---------- DOM refs ----------
