@@ -143,6 +143,7 @@ h2 { margin: 0 0 12px; font-size: 1.1rem; }
 
 .btn-ghost { background: transparent; color: var(--text-secondary); }
 .btn-danger-ghost:hover { color: var(--danger); border-color: var(--danger); }
+.btn-danger { background: var(--danger); border-color: var(--danger); color: #ffffff; }
 .btn:hover { filter: brightness(1.05); }
 
 .btn-hero {
@@ -491,6 +492,32 @@ select, input[type="text"], input[type="number"] {
 .history-when { color: var(--text-muted); margin-left: auto; white-space: nowrap; }
 .history-mins { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .history-focus { color: var(--text-muted); font-size: 0.85rem; min-width: 14px; }
+
+/* ---------- Themed modal dialogs ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 35;
+}
+
+.modal-dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  width: min(380px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-title { margin: 0; font-size: 1.05rem; }
+.modal-message { margin: 0; color: var(--text-secondary); font-size: 0.95rem; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 /* ---------- Focus rating dialog ---------- */
 .focus-overlay {

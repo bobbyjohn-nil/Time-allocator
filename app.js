@@ -1368,20 +1368,20 @@
     render();
   }
 
-  function editActivity(act) {
-    const name = prompt('Activity name:', act.name);
+  async function editActivity(act) {
+    const name = await themedPrompt('Rename activity', act.name);
     if (name === null || !name.trim()) return;
     act.name = name.trim();
     save();
     render();
   }
 
-  function deleteActivity(act) {
+  async function deleteActivity(act) {
     const n = state.sessions.filter(s => s.activityId === act.id).length;
     const msg = n
       ? `Delete "${act.name}" and its ${n} logged session${n === 1 ? '' : 's'}?`
       : `Delete "${act.name}"?`;
-    if (!confirm(msg)) return;
+    if (!(await themedConfirm(msg, { title: 'Delete activity', confirmLabel: 'Delete', danger: true }))) return;
     state.activities = state.activities.filter(a => a.id !== act.id);
     state.sessions = state.sessions.filter(s => s.activityId !== act.id);
     // Hand the freed share evenly to the unlocked survivors.
@@ -1508,6 +1508,81 @@
     }
   }
 
+  // ---------- Themed dialogs (replace native confirm/prompt) ----------
+
+  function showDialog({ title, message, input, defaultValue = '', confirmLabel = 'OK', danger = false }) {
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      const dialog = document.createElement('div');
+      dialog.className = 'modal-dialog';
+
+      if (title) {
+        const h = document.createElement('h3');
+        h.className = 'modal-title';
+        h.textContent = title;
+        dialog.appendChild(h);
+      }
+      if (message) {
+        const p = document.createElement('p');
+        p.className = 'modal-message';
+        p.textContent = message;
+        dialog.appendChild(p);
+      }
+
+      let field = null;
+      if (input) {
+        field = document.createElement('input');
+        field.type = 'text';
+        field.maxLength = 40;
+        field.value = defaultValue;
+        dialog.appendChild(field);
+      }
+
+      const actions = document.createElement('div');
+      actions.className = 'modal-actions';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'btn btn-ghost';
+      cancelBtn.textContent = 'Cancel';
+      const okBtn = document.createElement('button');
+      okBtn.className = danger ? 'btn btn-danger' : 'btn btn-primary';
+      okBtn.textContent = confirmLabel;
+      actions.append(cancelBtn, okBtn);
+      dialog.appendChild(actions);
+
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      const close = result => {
+        document.removeEventListener('keydown', onKey);
+        overlay.remove();
+        resolve(result);
+      };
+      const cancel = () => close(input ? null : false);
+      const ok = () => close(input ? field.value : true);
+      const onKey = e => {
+        if (e.key === 'Escape') cancel();
+        if (e.key === 'Enter' && input) ok();
+      };
+
+      okBtn.addEventListener('click', ok);
+      cancelBtn.addEventListener('click', cancel);
+      overlay.addEventListener('click', e => { if (e.target === overlay) cancel(); });
+      document.addEventListener('keydown', onKey);
+
+      if (field) {
+        field.focus();
+        field.select();
+      } else {
+        okBtn.focus();
+      }
+    });
+  }
+
+  const themedConfirm = (message, opts = {}) => showDialog({ message, ...opts });
+  const themedPrompt = (title, defaultValue) =>
+    showDialog({ title, input: true, defaultValue, confirmLabel: 'Save' });
+
   // ---------- Tooltip & toast ----------
 
   function attachTooltip(el, getText) {
@@ -1547,21 +1622,25 @@
 
   function importData(file) {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
+      let parsed;
       try {
-        const parsed = JSON.parse(reader.result);
+        parsed = JSON.parse(reader.result);
         if (!Array.isArray(parsed.activities) || !Array.isArray(parsed.sessions)) {
           throw new Error('bad shape');
         }
-        if (!confirm('Replace your current data with the imported file?')) return;
-        normalizeTargets(parsed.activities);
-        state = parsed;
-        save();
-        render();
-        showToast('Data imported.');
       } catch (e) {
         showToast("Couldn't read that file — is it a Time Allocator export?");
+        return;
       }
+      if (!(await themedConfirm('Replace your current data with the imported file?', { title: 'Import data', confirmLabel: 'Replace', danger: true }))) return;
+      normalizeTargets(parsed.activities);
+      if (typeof parsed.unlocked !== 'object' || !parsed.unlocked) parsed.unlocked = {};
+      if (typeof parsed.settings !== 'object' || !parsed.settings) parsed.settings = {};
+      state = parsed;
+      save();
+      render();
+      showToast('Data imported.');
     };
     reader.readAsText(file);
   }
@@ -1653,9 +1732,10 @@
 
   $('export-btn').addEventListener('click', exportData);
 
-  $('delete-btn').addEventListener('click', () => {
+  $('delete-btn').addEventListener('click', async () => {
     const n = state.sessions.length;
-    if (!confirm(`Delete ALL data — ${state.activities.length} activities, ${n} logged session${n === 1 ? '' : 's'}, and every achievement? This cannot be undone. (You can Export first to keep a backup.)`)) return;
+    const msg = `Delete ALL data — ${state.activities.length} activities, ${n} logged session${n === 1 ? '' : 's'}, and every achievement? This cannot be undone. (You can Export first to keep a backup.)`;
+    if (!(await themedConfirm(msg, { title: 'Delete all data', confirmLabel: 'Delete everything', danger: true }))) return;
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(TIMER_KEY);
     state = { activities: [], sessions: [], unlocked: {}, settings: {} };
