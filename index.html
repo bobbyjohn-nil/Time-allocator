@@ -13,7 +13,14 @@
     <p class="tagline">Tell it how you want to split your free time — it tells you what to do next.</p>
   </header>
 
+  <nav class="page-tabs" aria-label="Pages">
+    <button type="button" class="tab-btn active" data-page="home">Home</button>
+    <button type="button" class="tab-btn" data-page="history">History</button>
+    <button type="button" class="tab-btn" data-page="achievements">Achievements</button>
+  </nav>
+
   <main>
+    <div id="page-home" class="page">
     <!-- ============ RECOMMENDATION ============ -->
     <section class="card hero-card" id="recommend-section">
       <div class="hero-inner">
@@ -93,12 +100,26 @@
       </form>
     </section>
 
-    <!-- ============ HISTORY ============ -->
-    <section class="card" id="history-section">
-      <h2>History</h2>
-      <ul id="history-list" class="history-list"></ul>
-      <p id="history-empty" class="hint">No sessions logged yet.</p>
-    </section>
+    </div>
+
+    <!-- ============ HISTORY PAGE ============ -->
+    <div id="page-history" class="page" hidden>
+      <section class="card" id="history-section">
+        <h2>History</h2>
+        <p id="history-summary" class="hint"></p>
+        <ul id="history-list" class="history-list"></ul>
+        <p id="history-empty" class="hint">No sessions logged yet.</p>
+      </section>
+    </div>
+
+    <!-- ============ ACHIEVEMENTS PAGE ============ -->
+    <div id="page-achievements" class="page" hidden>
+      <section class="card" id="achievements-section">
+        <h2>Achievements</h2>
+        <p id="ach-summary" class="hint"></p>
+        <div id="ach-grid" class="ach-grid"></div>
+      </section>
+    </div>
   </main>
 
   <footer class="site-footer">

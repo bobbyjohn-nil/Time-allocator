@@ -85,6 +85,35 @@ main {
 .site-header h1 { margin: 0; font-size: 1.6rem; }
 .tagline { margin: 4px 0 0; color: var(--text-secondary); }
 
+/* ---------- Page tabs ---------- */
+.page-tabs {
+  max-width: 720px;
+  margin: 0 auto 16px;
+  padding: 0 16px;
+  display: flex;
+  gap: 6px;
+}
+
+.tab-btn {
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  background: var(--surface);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.page { display: flex; flex-direction: column; gap: 16px; }
+.page[hidden] { display: none; }
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -445,6 +474,46 @@ select, input[type="text"], input[type="number"] {
 .history-item:last-child { border-bottom: none; }
 .history-when { color: var(--text-muted); margin-left: auto; white-space: nowrap; }
 .history-mins { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+/* ---------- Achievements ---------- */
+.ach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ach-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid var(--gridline);
+  border-radius: 10px;
+  padding: 12px;
+  opacity: 0.55;
+}
+
+.ach-card.unlocked { opacity: 1; border-color: var(--accent); }
+
+.ach-sym {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  border-radius: 8px;
+  background: var(--track);
+  color: var(--text-muted);
+}
+
+.ach-card.unlocked .ach-sym { background: var(--accent); color: var(--accent-ink); }
+
+.ach-body { min-width: 0; }
+.ach-title { font-weight: 600; font-size: 0.95rem; }
+.ach-desc { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+.ach-status { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
 
 /* ---------- Footer ---------- */
 .site-footer {

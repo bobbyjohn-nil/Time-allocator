@@ -22,11 +22,12 @@
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed.activities) && Array.isArray(parsed.sessions)) {
           normalizeTargets(parsed.activities);
+          if (typeof parsed.unlocked !== 'object' || !parsed.unlocked) parsed.unlocked = {};
           return parsed;
         }
       }
     } catch (e) { /* corrupted storage falls through to fresh state */ }
-    return { activities: [], sessions: [] };
+    return { activities: [], sessions: [], unlocked: {} };
   }
 
   function save() {
@@ -254,6 +255,96 @@
     return Math.round(x / 5) * 5;
   }
 
+  // ---------- Achievements ----------
+
+  function totalTracked() {
+    return state.sessions.reduce((a, s) => a + s.minutes, 0);
+  }
+
+  // Longest run of consecutive days with at least one session.
+  function maxStreak() {
+    const days = [...new Set(state.sessions.map(s => {
+      const d = new Date(s.timestamp);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    }))].sort((a, b) => a - b);
+    let best = days.length ? 1 : 0;
+    let cur = 1;
+    for (let i = 1; i < days.length; i++) {
+      if (Math.round((days[i] - days[i - 1]) / 86400000) === 1) {
+        cur += 1;
+        best = Math.max(best, cur);
+      } else {
+        cur = 1;
+      }
+    }
+    return best;
+  }
+
+  function maxActivitiesInADay() {
+    const byDay = {};
+    state.sessions.forEach(s => {
+      const d = new Date(s.timestamp);
+      d.setHours(0, 0, 0, 0);
+      (byDay[d.getTime()] = byDay[d.getTime()] || new Set()).add(s.activityId);
+    });
+    return Object.values(byDay).reduce((a, set) => Math.max(a, set.size), 0);
+  }
+
+  // All activities within 5 points of target with 5+ hours tracked this week.
+  function onTargetThisWeek() {
+    if (state.activities.length < 2) return false;
+    const start = startOfWeek(new Date()).getTime();
+    const ss = state.sessions.filter(s => s.timestamp >= start);
+    const total = ss.reduce((a, s) => a + s.minutes, 0);
+    if (total < 300) return false;
+    const tsum = state.activities.reduce((a, x) => a + x.targetPercent, 0) || 1;
+    return state.activities.every(act => {
+      const spent = ss.filter(s => s.activityId === act.id).reduce((a, s) => a + s.minutes, 0);
+      return Math.abs(spent / total - act.targetPercent / tsum) * 100 <= 5;
+    });
+  }
+
+  const ACHIEVEMENTS = [
+    { id: 'first-session', sym: '★', title: 'First step', desc: 'Log your first session.',
+      test: () => ({ done: state.sessions.length >= 1 }) },
+    { id: 'three-activities', sym: '◆', title: 'Getting organized', desc: 'Have 3 activities at once.',
+      test: () => ({ done: state.activities.length >= 3 }) },
+    { id: 'deep-focus', sym: '✦', title: 'Deep focus', desc: 'Log a single session of 1 hour or more.',
+      test: () => ({ done: state.sessions.some(s => s.minutes >= 60) }) },
+    { id: 'ten-hours', sym: '⧗', title: 'Ten hours in', desc: 'Track 10 hours in total.',
+      test: () => ({ done: totalTracked() >= 600, progress: `${fmtDuration(Math.min(totalTracked(), 600))} / 10h` }) },
+    { id: 'marathon', sym: '∞', title: 'Marathon', desc: 'Track 50 hours in total.',
+      test: () => ({ done: totalTracked() >= 3000, progress: `${fmtDuration(Math.min(totalTracked(), 3000))} / 50h` }) },
+    { id: 'century', sym: 'Σ', title: 'Century', desc: 'Log 100 sessions.',
+      test: () => ({ done: state.sessions.length >= 100, progress: `${Math.min(state.sessions.length, 100)} / 100` }) },
+    { id: 'streak-3', sym: '▲', title: 'Warming up', desc: 'Log time on 3 days in a row.',
+      test: () => ({ done: maxStreak() >= 3, progress: `${Math.min(maxStreak(), 3)} / 3 days` }) },
+    { id: 'streak-7', sym: '●', title: 'Full week', desc: 'Log time on 7 days in a row.',
+      test: () => ({ done: maxStreak() >= 7, progress: `${Math.min(maxStreak(), 7)} / 7 days` }) },
+    { id: 'variety', sym: '✧', title: 'Mixing it up', desc: 'Log 3 different activities in one day.',
+      test: () => ({ done: maxActivitiesInADay() >= 3 }) },
+    { id: 'dialed-in', sym: '✓', title: 'Dialed in', desc: 'Every activity within 5 points of its target with 5+ hours tracked this week.',
+      test: () => ({ done: onTargetThisWeek() }) },
+    { id: 'early-bird', sym: '☼', title: 'Early bird', desc: 'Log a session before 8am.',
+      test: () => ({ done: state.sessions.some(s => new Date(s.timestamp).getHours() < 8) }) },
+    { id: 'night-owl', sym: '☾', title: 'Night owl', desc: 'Log a session at 10pm or later.',
+      test: () => ({ done: state.sessions.some(s => new Date(s.timestamp).getHours() >= 22) }) },
+  ];
+
+  // Unlocks persist, so deleting old sessions never takes a badge back.
+  function checkAchievements(silent) {
+    let changed = false;
+    ACHIEVEMENTS.forEach(a => {
+      if (a.test().done && !state.unlocked[a.id]) {
+        state.unlocked[a.id] = Date.now();
+        changed = true;
+        if (!silent) showToast(`Achievement unlocked: ${a.sym} ${a.title}`);
+      }
+    });
+    if (changed) save();
+  }
+
   // ---------- DOM refs ----------
 
   const $ = id => document.getElementById(id);
@@ -279,6 +370,9 @@
   const balanceSummary = $('balance-summary');
   const historyList = $('history-list');
   const historyEmpty = $('history-empty');
+  const historySummary = $('history-summary');
+  const achGrid = $('ach-grid');
+  const achSummary = $('ach-summary');
   const tooltip = $('tooltip');
   const toast = $('toast');
 
@@ -289,6 +383,8 @@
     renderSelects();
     renderBalance();
     renderHistory();
+    checkAchievements(false);
+    renderAchievements();
   }
 
   function renderActivities() {
@@ -602,8 +698,11 @@
 
   function renderHistory() {
     historyList.innerHTML = '';
-    const recent = [...state.sessions].sort((a, b) => b.timestamp - a.timestamp).slice(0, 25);
+    const recent = [...state.sessions].sort((a, b) => b.timestamp - a.timestamp).slice(0, 100);
     historyEmpty.style.display = recent.length ? 'none' : '';
+    historySummary.textContent = state.sessions.length
+      ? `${state.sessions.length} session${state.sessions.length === 1 ? '' : 's'} · ${fmtDuration(totalTracked())} tracked in total${state.sessions.length > 100 ? ' · showing the last 100' : ''}`
+      : '';
 
     recent.forEach(s => {
       const act = state.activities.find(a => a.id === s.activityId);
@@ -638,6 +737,68 @@
       li.append(sw, name, mins, when, del);
       historyList.appendChild(li);
     });
+  }
+
+  function renderAchievements() {
+    achGrid.innerHTML = '';
+    let unlockedCount = 0;
+
+    ACHIEVEMENTS.forEach(a => {
+      const result = a.test();
+      const unlockedAt = state.unlocked[a.id];
+      if (unlockedAt) unlockedCount += 1;
+
+      const card = document.createElement('div');
+      card.className = 'ach-card' + (unlockedAt ? ' unlocked' : '');
+
+      const sym = document.createElement('span');
+      sym.className = 'ach-sym';
+      sym.textContent = a.sym;
+
+      const body = document.createElement('div');
+      body.className = 'ach-body';
+
+      const title = document.createElement('div');
+      title.className = 'ach-title';
+      title.textContent = a.title;
+
+      const desc = document.createElement('div');
+      desc.className = 'ach-desc';
+      desc.textContent = a.desc;
+
+      body.append(title, desc);
+
+      const status = document.createElement('div');
+      status.className = 'ach-status';
+      if (unlockedAt) {
+        status.textContent = `Unlocked ${new Date(unlockedAt).toLocaleDateString()}`;
+      } else if (result.progress) {
+        status.textContent = result.progress;
+      } else {
+        status.textContent = 'Locked';
+      }
+      body.appendChild(status);
+
+      card.append(sym, body);
+      achGrid.appendChild(card);
+    });
+
+    achSummary.textContent = `${unlockedCount} of ${ACHIEVEMENTS.length} unlocked`;
+  }
+
+  // ---------- Pages ----------
+
+  const PAGES = ['home', 'history', 'achievements'];
+
+  function pageFromHash() {
+    const h = location.hash.slice(1);
+    return PAGES.includes(h) ? h : 'home';
+  }
+
+  function showPage(page) {
+    PAGES.forEach(p => { $('page-' + p).hidden = p !== page; });
+    document.querySelectorAll('.tab-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.page === page));
   }
 
   function renderRecommendation() {
@@ -1020,6 +1181,11 @@
 
   askBtn.addEventListener('click', renderRecommendation);
 
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => { location.hash = btn.dataset.page; });
+  });
+  window.addEventListener('hashchange', () => showPage(pageFromHash()));
+
   document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -1087,6 +1253,8 @@
 
   // ---------- Init ----------
 
+  checkAchievements(true); // no toast spam for badges earned before this visit
   render();
   syncTimerUI();
+  showPage(pageFromHash());
 })();
