@@ -573,16 +573,19 @@
             <path d="M -12 -86 Q -13 -97 1 -98 Q 14 -98 13 -88 Q 0 -84 -12 -86 Z" fill="#4a4438"/>
             <path d="M 13 -88 L 21 -86 Q 13 -83 10 -85 Z" fill="#3a352b"/>
             <g class="cs-smoke" fill="#9aa7c9">
-              <circle cx="22" cy="-80" r="2" class="cs-puff"/>
-              <circle cx="26" cy="-89" r="2.5" class="cs-puff p2"/>
-              <circle cx="30" cy="-98" r="3" class="cs-puff p3"/>
+              <circle cx="25" cy="-82" r="2" class="cs-puff"/>
+              <circle cx="28" cy="-91" r="2.5" class="cs-puff p2"/>
+              <circle cx="31" cy="-100" r="3" class="cs-puff p3"/>
             </g>
-            <path d="M 10 -76 Q 16 -74 18 -69" stroke="#4a3524" stroke-width="3" fill="none" stroke-linecap="round"/>
-            <rect x="15" y="-70" width="6" height="7" rx="2" fill="#4a3524"/>
+            <path d="M 8 -78 L 9 -75 L 19 -68 L 20 -72 Z" fill="#3a2a1e"/>
+            <path d="M 19 -73 L 19 -65 Q 19 -59 24.5 -59 Q 30 -59 30 -65 L 30 -73 Z" fill="#5a4030"/>
+            <ellipse cx="24.5" cy="-73" rx="5.5" ry="1.8" fill="#241a12"/>
             <g class="cs-glass">
-              <line x1="3" y1="-52" x2="26" y2="-38" stroke="#737d92" stroke-width="7" stroke-linecap="round"/>
-              <line x1="26" y1="-38" x2="33" y2="-33" stroke="#2b3040" stroke-width="4" stroke-linecap="round"/>
-              <circle cx="39" cy="-30" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
+              <line x1="2" y1="-54" x2="14" y2="-42" stroke="#737d92" stroke-width="7.5" stroke-linecap="round"/>
+              <line x1="14" y1="-42" x2="28" y2="-36" stroke="#737d92" stroke-width="6" stroke-linecap="round"/>
+              <circle cx="30" cy="-35" r="3.5" fill="#c9b8a6"/>
+              <line x1="32" y1="-34" x2="36" y2="-32" stroke="#2b3040" stroke-width="3.5" stroke-linecap="round"/>
+              <circle cx="42" cy="-29" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
             </g>
           </g>
         </g>
