@@ -128,6 +128,19 @@
     <span class="footer-note">All data stays in your browser.</span>
   </footer>
 
+  <div id="focus-overlay" class="focus-overlay" hidden>
+    <div class="focus-dialog" role="dialog" aria-label="How locked in were you?">
+      <h3>How locked in were you?</h3>
+      <div class="focus-options">
+        <button type="button" class="focus-btn" data-focus="1"><span class="focus-sym">○</span> Distracted</button>
+        <button type="button" class="focus-btn" data-focus="2"><span class="focus-sym">◑</span> In and out</button>
+        <button type="button" class="focus-btn" data-focus="3"><span class="focus-sym">◕</span> Mostly focused</button>
+        <button type="button" class="focus-btn" data-focus="4"><span class="focus-sym">●</span> Locked in</button>
+      </div>
+      <button type="button" id="focus-skip" class="btn btn-ghost">Skip</button>
+    </div>
+  </div>
+
   <div id="tooltip" class="tooltip" hidden></div>
   <div id="toast" class="toast" hidden></div>
 

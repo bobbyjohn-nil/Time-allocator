@@ -474,6 +474,52 @@ select, input[type="text"], input[type="number"] {
 .history-item:last-child { border-bottom: none; }
 .history-when { color: var(--text-muted); margin-left: auto; white-space: nowrap; }
 .history-mins { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.history-focus { color: var(--text-muted); font-size: 0.85rem; min-width: 14px; }
+
+/* ---------- Focus rating dialog ---------- */
+.focus-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+
+.focus-overlay[hidden] { display: none; }
+
+.focus-dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  width: min(320px, 90vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.focus-dialog h3 { margin: 0; font-size: 1.05rem; }
+
+.focus-options { display: flex; flex-direction: column; gap: 8px; }
+
+.focus-btn {
+  font: inherit;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--gridline);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.focus-btn:hover { background: var(--track); }
+.focus-sym { color: var(--accent); font-size: 1.05rem; }
 
 /* ---------- Achievements ---------- */
 .ach-grid {

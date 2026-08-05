@@ -291,27 +291,20 @@
     return Object.values(byDay).reduce((a, set) => Math.max(a, set.size), 0);
   }
 
-  // All activities within 5 points of target with 5+ hours tracked this week.
-  function onTargetThisWeek() {
-    if (state.activities.length < 2) return false;
-    const start = startOfWeek(new Date()).getTime();
-    const ss = state.sessions.filter(s => s.timestamp >= start);
-    const total = ss.reduce((a, s) => a + s.minutes, 0);
-    if (total < 300) return false;
-    const tsum = state.activities.reduce((a, x) => a + x.targetPercent, 0) || 1;
-    return state.activities.every(act => {
-      const spent = ss.filter(s => s.activityId === act.id).reduce((a, s) => a + s.minutes, 0);
-      return Math.abs(spent / total - act.targetPercent / tsum) * 100 <= 5;
-    });
-  }
+  const FOCUS_LEVELS = {
+    1: { sym: '○', label: 'Distracted' },
+    2: { sym: '◑', label: 'In and out' },
+    3: { sym: '◕', label: 'Mostly focused' },
+    4: { sym: '●', label: 'Locked in' },
+  };
 
   const ACHIEVEMENTS = [
     { id: 'first-session', sym: '★', title: 'First step', desc: 'Log your first session.',
       test: () => ({ done: state.sessions.length >= 1 }) },
     { id: 'three-activities', sym: '◆', title: 'Getting organized', desc: 'Have 3 activities at once.',
       test: () => ({ done: state.activities.length >= 3 }) },
-    { id: 'deep-focus', sym: '✦', title: 'Deep focus', desc: 'Log a single session of 1 hour or more.',
-      test: () => ({ done: state.sessions.some(s => s.minutes >= 60) }) },
+    { id: 'deep-focus', sym: '✦', title: 'Deep focus', desc: 'Log a single session of 2 hours or more.',
+      test: () => ({ done: state.sessions.some(s => s.minutes >= 120) }) },
     { id: 'ten-hours', sym: '⧗', title: 'Ten hours in', desc: 'Track 10 hours in total.',
       test: () => ({ done: totalTracked() >= 600, progress: `${fmtDuration(Math.min(totalTracked(), 600))} / 10h` }) },
     { id: 'marathon', sym: '∞', title: 'Marathon', desc: 'Track 50 hours in total.',
@@ -324,8 +317,8 @@
       test: () => ({ done: maxStreak() >= 7, progress: `${Math.min(maxStreak(), 7)} / 7 days` }) },
     { id: 'variety', sym: '✧', title: 'Mixing it up', desc: 'Log 3 different activities in one day.',
       test: () => ({ done: maxActivitiesInADay() >= 3 }) },
-    { id: 'dialed-in', sym: '✓', title: 'Dialed in', desc: 'Every activity within 5 points of its target with 5+ hours tracked this week.',
-      test: () => ({ done: onTargetThisWeek() }) },
+    { id: 'locked-in', sym: '◎', title: 'Locked in', desc: 'Rate a session as fully locked in.',
+      test: () => ({ done: state.sessions.some(s => s.focus === 4) }) },
     { id: 'early-bird', sym: '☼', title: 'Early bird', desc: 'Log a session before 8am.',
       test: () => ({ done: state.sessions.some(s => new Date(s.timestamp).getHours() < 8) }) },
     { id: 'night-owl', sym: '☾', title: 'Night owl', desc: 'Log a session at 10pm or later.',
@@ -375,6 +368,7 @@
   const achSummary = $('ach-summary');
   const tooltip = $('tooltip');
   const toast = $('toast');
+  const focusOverlay = $('focus-overlay');
 
   // ---------- Rendering ----------
 
@@ -720,6 +714,13 @@
       mins.className = 'history-mins';
       mins.textContent = fmtDuration(s.minutes);
 
+      const focus = document.createElement('span');
+      focus.className = 'history-focus';
+      if (s.focus && FOCUS_LEVELS[s.focus]) {
+        focus.textContent = FOCUS_LEVELS[s.focus].sym;
+        focus.title = FOCUS_LEVELS[s.focus].label;
+      }
+
       const when = document.createElement('span');
       when.className = 'history-when';
       when.textContent = fmtWhen(s.timestamp);
@@ -734,7 +735,7 @@
         render();
       });
 
-      li.append(sw, name, mins, when, del);
+      li.append(sw, name, mins, focus, when, del);
       historyList.appendChild(li);
     });
   }
@@ -935,10 +936,11 @@
     btn.className = 'btn btn-ghost';
     btn.textContent = label;
     btn.addEventListener('click', () => {
-      blocks.forEach(b => addSession(b.activity.id, b.minutes));
+      const ids = blocks.map(b => addSession(b.activity.id, b.minutes).id);
       const total = blocks.reduce((a, b) => a + b.minutes, 0);
       showToast(`Logged ${fmtDuration(total)} across ${blocks.length} ${blocks.length === 1 ? 'activity' : 'activities'}`);
       renderRecommendation();
+      askFocus(ids);
     });
     return btn;
   }
@@ -988,9 +990,10 @@
     logBtn.className = 'btn btn-ghost';
     logBtn.textContent = `Log ${fmtDuration(rec.suggested)} now`;
     logBtn.addEventListener('click', () => {
-      addSession(act.id, rec.suggested);
+      const session = addSession(act.id, rec.suggested);
       showToast(`Logged ${fmtDuration(rec.suggested)} of ${act.name}`);
       renderRecommendation();
+      askFocus([session.id]);
     });
 
     actions.append(startBtn, logBtn);
@@ -1047,9 +1050,33 @@
   }
 
   function addSession(activityId, minutes) {
-    state.sessions.push({ id: uid(), activityId, minutes, timestamp: Date.now() });
+    const session = { id: uid(), activityId, minutes, timestamp: Date.now() };
+    state.sessions.push(session);
     save();
     render();
+    return session;
+  }
+
+  // ---------- Focus rating ----------
+
+  let focusPendingIds = null;
+
+  function askFocus(sessionIds) {
+    focusPendingIds = sessionIds;
+    focusOverlay.hidden = false;
+  }
+
+  function resolveFocus(level) {
+    if (level && focusPendingIds) {
+      focusPendingIds.forEach(id => {
+        const s = state.sessions.find(x => x.id === id);
+        if (s) s.focus = level;
+      });
+      save();
+      render();
+    }
+    focusPendingIds = null;
+    focusOverlay.hidden = true;
   }
 
   // ---------- Timer ----------
@@ -1084,8 +1111,9 @@
       return;
     }
     const act = state.activities.find(a => a.id === t.activityId);
-    addSession(t.activityId, minutes);
+    const session = addSession(t.activityId, minutes);
     showToast(`Logged ${fmtDuration(minutes)}${act ? ` of ${act.name}` : ''}`);
+    askFocus([session.id]);
   }
 
   function cancelTimer() {
@@ -1186,6 +1214,14 @@
   });
   window.addEventListener('hashchange', () => showPage(pageFromHash()));
 
+  focusOverlay.querySelectorAll('.focus-btn').forEach(btn => {
+    btn.addEventListener('click', () => resolveFocus(parseInt(btn.dataset.focus, 10)));
+  });
+  $('focus-skip').addEventListener('click', () => resolveFocus(null));
+  focusOverlay.addEventListener('click', e => {
+    if (e.target === focusOverlay) resolveFocus(null);
+  });
+
   document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -1215,19 +1251,21 @@
     e.preventDefault();
     const mins = parseInt(logMinutes.value, 10);
     if (!logActivity.value || !(mins >= 1)) return;
-    addSession(logActivity.value, mins);
+    const session = addSession(logActivity.value, mins);
     const act = state.activities.find(a => a.id === logActivity.value);
     showToast(`Logged ${fmtDuration(mins)}${act ? ` of ${act.name}` : ''}`);
     logMinutes.value = '';
+    askFocus([session.id]);
   });
 
   quickChips.addEventListener('click', e => {
     const chip = e.target.closest('.chip');
     if (!chip || !logActivity.value) return;
     const mins = parseInt(chip.dataset.min, 10);
-    addSession(logActivity.value, mins);
+    const session = addSession(logActivity.value, mins);
     const act = state.activities.find(a => a.id === logActivity.value);
     showToast(`Logged ${fmtDuration(mins)}${act ? ` of ${act.name}` : ''}`);
+    askFocus([session.id]);
   });
 
   timerToggle.addEventListener('click', () => {
