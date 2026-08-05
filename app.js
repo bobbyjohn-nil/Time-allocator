@@ -523,27 +523,34 @@
       <g class="cs-flip">
         <g class="cs-bob">
           <g>
-            <polygon points="-14,0 -7,-16 -1,-16 -7,0" fill="#151b30"/>
-            <polygon points="5,0 2,-16 9,-16 15,0" fill="#151b30"/>
-            <path d="M -32 -6 L -15 -44 L -11 -58 Q 2 -68 14 -60 L 18 -44 L 24 -6 Z" fill="#1d2440"/>
-            <path d="M -17 -42 Q 1 -35 19 -43" stroke="#151b30" stroke-width="2" fill="none"/>
-            <path d="M -10 -60 L -8 -80 L 6 -62 Z" fill="#2a3560"/>
-            <path d="M 14 -60 L 20 -78 L 4 -62 Z" fill="#2a3560"/>
-            <rect x="-4" y="-78" width="20" height="7" fill="#0b0f1c"/>
-            <path d="M -12 -78 Q 3 -98 18 -78 Z" fill="#151b30"/>
-            <path d="M 16 -79 L 28 -75 L 14 -72 Z" fill="#151b30"/>
-            <path d="M -10 -79 L -22 -75 L -8 -72 Z" fill="#151b30"/>
-            <circle cx="3" cy="-94" r="2" fill="#232c4d"/>
-            <g class="cs-smoke" fill="#9aa7c9">
-              <circle cx="28" cy="-76" r="2" class="cs-puff"/>
-              <circle cx="32" cy="-85" r="2.5" class="cs-puff p2"/>
-              <circle cx="36" cy="-94" r="3" class="cs-puff p3"/>
+            <polygon points="-13,0 -5,0 -5,-4 -13,-4" fill="#0e1015"/>
+            <polygon points="5,0 15,0 15,-4 5,-4" fill="#0e1015"/>
+            <rect x="-11" y="-32" width="7" height="28" fill="#191c26"/>
+            <rect x="5" y="-32" width="7" height="28" fill="#191c26"/>
+            <polygon points="7,-14 13,-15 14,-58 8,-58" fill="#14161f"/>
+            <path d="M -11 -68 Q -16 -40 -18 -12 L 7 -12 L 8 -56 L 10 -70 L -4 -74 Z" fill="#737d92"/>
+            <path d="M 8 -58 L 18 -78 L 2 -70 Z" fill="#5b6478"/>
+            <path d="M -11 -68 L -16 -84 L -1 -73 Z" fill="#5b6478"/>
+            <rect x="0" y="-66" width="13" height="9" rx="4" fill="#39415a" transform="rotate(-8 6 -62)"/>
+            <rect x="8" y="-58" width="5" height="12" rx="2" fill="#39415a"/>
+            <circle cx="3" cy="-82" r="9" fill="#c9b8a6"/>
+            <g fill="#241f1a">
+              <circle cx="1" cy="-88" r="6.5"/>
+              <circle cx="-4" cy="-84" r="5.5"/>
+              <circle cx="8" cy="-86" r="5"/>
+              <rect x="-9" y="-86" width="4" height="9" rx="2"/>
             </g>
-            <path d="M 14 -73 Q 20 -70 23 -64" stroke="#3a2a1c" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-            <rect x="20" y="-66" width="8" height="9" rx="3" fill="#3a2a1c"/>
+            <g class="cs-smoke" fill="#9aa7c9">
+              <circle cx="22" cy="-80" r="2" class="cs-puff"/>
+              <circle cx="26" cy="-89" r="2.5" class="cs-puff p2"/>
+              <circle cx="30" cy="-98" r="3" class="cs-puff p3"/>
+            </g>
+            <path d="M 10 -76 Q 16 -74 18 -69" stroke="#4a3524" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <rect x="15" y="-70" width="6" height="7" rx="2" fill="#4a3524"/>
             <g class="cs-glass">
-              <line x1="10" y1="-38" x2="30" y2="-32" stroke="#1d2440" stroke-width="5" stroke-linecap="round"/>
-              <circle cx="38" cy="-28" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
+              <line x1="3" y1="-52" x2="26" y2="-38" stroke="#737d92" stroke-width="7" stroke-linecap="round"/>
+              <line x1="26" y1="-38" x2="33" y2="-33" stroke="#2b3040" stroke-width="4" stroke-linecap="round"/>
+              <circle cx="39" cy="-30" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
             </g>
           </g>
         </g>
