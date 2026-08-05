@@ -674,6 +674,41 @@ select, input[type="text"], input[type="number"] {
 
 .cs-svg { width: 100%; height: 100%; display: block; }
 
+/* The camera: pans, rotates, and zooms after the detective, tightening
+   with every dart until it lands in a close-up on the badge. Each frame
+   is translate(center) rotate scale translate(-point of interest). */
+.cs-camera {
+  transform-origin: 0 0;
+  animation: cs-camera 8.4s linear forwards;
+}
+
+@keyframes cs-camera {
+  0% { transform: translate(400px, 225px) rotate(0deg) scale(1.05) translate(-400px, -280px); }
+  9% { transform: translate(400px, 225px) rotate(-3deg) scale(1.35) translate(-300px, -370px); }
+  14% { transform: translate(400px, 225px) rotate(2deg) scale(1.5) translate(-300px, -370px); }
+  23% { transform: translate(400px, 225px) rotate(-5deg) scale(1.6) translate(-110px, -370px); }
+  28% { transform: translate(400px, 225px) rotate(3deg) scale(1.8) translate(-90px, -370px); }
+  37% { transform: translate(400px, 225px) rotate(-6deg) scale(1.9) translate(-430px, -370px); }
+  41% { transform: translate(400px, 225px) rotate(4deg) scale(2.1) translate(-420px, -378px); }
+  57% { transform: translate(400px, 225px) rotate(-2deg) scale(2.4) translate(-470px, -380px); }
+  64% { transform: translate(400px, 225px) rotate(1deg) scale(2.9) translate(-495px, -385px); }
+  72% { transform: translate(400px, 225px) rotate(-1deg) scale(3.3) translate(-500px, -388px); }
+  100% { transform: translate(400px, 225px) rotate(0deg) scale(3.4) translate(-500px, -388px); }
+}
+
+.cs-float {
+  transform-box: fill-box;
+  animation: cs-float 5s ease-in-out infinite alternate;
+}
+
+.cs-float.f2 { animation-delay: 1.6s; }
+.cs-float.f3 { animation-delay: 3.2s; }
+
+@keyframes cs-float {
+  from { transform: translateY(0); }
+  to { transform: translateY(-14px); }
+}
+
 .cs-star { animation: cs-twinkle 2.2s infinite; }
 .cs-star.s2 { animation-delay: 0.7s; }
 .cs-star.s3 { animation-delay: 1.4s; }

@@ -450,7 +450,9 @@
       <stop offset="1" stop-color="#ffe9a8" stop-opacity="0.06"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="450" fill="#0a0e18"/>
+  <rect x="-800" y="-450" width="2400" height="1350" fill="#0a0e18"/>
+  <g class="cs-camera">
+  <rect x="-400" y="-225" width="1600" height="900" fill="#0a0e18"/>
   <g fill="#c8d4ee">
     <circle cx="80" cy="60" r="1.5" class="cs-star"/>
     <circle cx="200" cy="100" r="1" class="cs-star s2"/>
@@ -459,23 +461,38 @@
     <circle cx="640" cy="70" r="1.4" class="cs-star s3"/>
     <circle cx="730" cy="130" r="1" class="cs-star"/>
   </g>
+  <g fill="#141c3f" opacity="0.4">
+    <polygon points="90,-225 190,-225 40,410 -30,410"/>
+    <polygon points="660,-225 730,-225 880,410 790,410"/>
+  </g>
+  <g class="cs-float">
+    <circle cx="170" cy="120" r="24" fill="#1a2547" opacity="0.6"/>
+  </g>
+  <g class="cs-float f2">
+    <circle cx="350" cy="85" r="15" fill="none" stroke="#223065" stroke-width="3" opacity="0.7"/>
+  </g>
+  <g class="cs-float f3">
+    <polygon points="690,80 712,118 668,118" fill="#1a2547" opacity="0.55"/>
+  </g>
+  <g class="cs-float f2">
+    <rect x="486" y="130" width="20" height="20" fill="#182246" opacity="0.5" transform="rotate(35 496 140)"/>
+  </g>
   <g fill="#10152a">
-    <rect x="0" y="150" width="120" height="260"/>
-    <rect x="130" y="190" width="90" height="220"/>
-    <rect x="240" y="120" width="110" height="290"/>
-    <rect x="600" y="160" width="100" height="250"/>
-    <rect x="710" y="120" width="90" height="290"/>
+    <polygon points="-60,410 30,170 90,260 130,410"/>
+    <polygon points="140,410 200,140 260,410"/>
+    <polygon points="250,410 300,220 340,180 380,410"/>
+    <polygon points="620,410 660,150 700,240 740,410"/>
+    <polygon points="720,410 780,180 830,240 900,410"/>
   </g>
-  <g fill="#2a3352">
-    <rect x="20" y="180" width="14" height="18"/>
-    <rect x="60" y="240" width="14" height="18"/>
-    <rect x="270" y="160" width="14" height="18"/>
-    <rect x="310" y="220" width="14" height="18"/>
-    <rect x="630" y="200" width="14" height="18"/>
-    <rect x="740" y="170" width="14" height="18"/>
+  <g fill="#2a3352" opacity="0.85">
+    <rect x="55" y="250" width="10" height="14" transform="rotate(8 60 257)"/>
+    <rect x="195" y="200" width="10" height="14" transform="rotate(-6 200 207)"/>
+    <rect x="305" y="240" width="10" height="14" transform="rotate(10 310 247)"/>
+    <rect x="660" y="220" width="10" height="14" transform="rotate(-8 665 227)"/>
+    <rect x="770" y="250" width="10" height="14" transform="rotate(6 775 257)"/>
   </g>
-  <rect x="0" y="410" width="800" height="40" fill="#0c101f"/>
-  <rect x="0" y="406" width="800" height="6" fill="#161c33"/>
+  <rect x="-400" y="410" width="1600" height="240" fill="#0c101f"/>
+  <rect x="-400" y="406" width="1600" height="6" fill="#161c33"/>
   <g class="cs-flicker">
     <polygon points="560,120 480,410 640,410" fill="url(#csLight)"/>
     <ellipse cx="560" cy="410" rx="95" ry="12" fill="#f5d98b" opacity="0.25"/>
@@ -516,6 +533,7 @@
         </g>
       </g>
     </g>
+  </g>
   </g>
 </svg>`;
 
