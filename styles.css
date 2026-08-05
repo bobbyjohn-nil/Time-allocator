@@ -632,6 +632,129 @@ select, input[type="text"], input[type="number"] {
   max-width: 100%;
 }
 
+/* ---------- 'Nice' cutscene ---------- */
+.cutscene {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #06080f;
+  cursor: pointer;
+  transition: opacity 0.5s;
+}
+
+.cutscene.cutscene-out { opacity: 0; }
+
+.cs-svg { width: 100%; height: 100%; display: block; }
+
+.cs-star { animation: cs-twinkle 2.2s infinite; }
+.cs-star.s2 { animation-delay: 0.7s; }
+.cs-star.s3 { animation-delay: 1.4s; }
+
+@keyframes cs-twinkle {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.25; }
+}
+
+.cs-flicker { animation: cs-flicker 2.4s infinite linear; }
+
+@keyframes cs-flicker {
+  0%, 100% { opacity: 1; }
+  6% { opacity: 0.25; }
+  8% { opacity: 1; }
+  33% { opacity: 0.85; }
+  35% { opacity: 0.25; }
+  37% { opacity: 1; }
+  70% { opacity: 0.55; }
+  72% { opacity: 1; }
+}
+
+.cs-detective { animation: cs-walk 3.2s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
+
+@keyframes cs-walk {
+  from { transform: translateX(-60px); }
+  to { transform: translateX(440px); }
+}
+
+.cs-bob { animation: cs-bob 0.45s ease-in-out 8; }
+
+@keyframes cs-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.cs-glass {
+  transform-box: fill-box;
+  transform-origin: 20% 80%;
+  animation: cs-sweep 1s ease-in-out 3.4s 3 alternate;
+}
+
+@keyframes cs-sweep {
+  from { transform: rotate(8deg); }
+  to { transform: rotate(-28deg); }
+}
+
+.cs-badge {
+  opacity: 0.12;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cs-found 1s ease-out 5.4s forwards;
+}
+
+@keyframes cs-found {
+  0% { opacity: 0.12; transform: scale(1); }
+  60% { opacity: 1; transform: scale(1.8); }
+  100% { opacity: 1; transform: scale(1.5); filter: drop-shadow(0 0 10px #7db4ff); }
+}
+
+.cutscene-reveal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  opacity: 0;
+  animation: cs-reveal 0.7s ease-out 6.2s forwards;
+}
+
+@keyframes cs-reveal {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.cutscene-badge {
+  width: 84px;
+  height: 64px;
+  border-radius: 14px;
+  background: #2a78d6;
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 40px rgba(90, 150, 255, 0.55);
+}
+
+.cutscene-title {
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.cutscene-sub { color: #aab6d4; font-size: 0.95rem; }
+
+.cutscene-skip {
+  position: absolute;
+  bottom: 16px;
+  right: 20px;
+  color: #5b6785;
+  font-size: 0.8rem;
+}
+
 /* ---------- Confetti ---------- */
 .confetti {
   position: fixed;

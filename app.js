@@ -410,18 +410,132 @@
   // Unlocks persist, so deleting old sessions never takes a badge back.
   function checkAchievements(silent) {
     let changed = false;
+    let niceJustUnlocked = false;
     ACHIEVEMENTS.forEach(a => {
       if (a.test().done && !state.unlocked[a.id]) {
         state.unlocked[a.id] = Date.now();
         changed = true;
+        if (a.id === 'nice') {
+          niceJustUnlocked = true; // gets its own cutscene instead of a toast
+          return;
+        }
         // Delayed so it outlives the 'Logged Xm' toast the caller shows next.
         if (!silent) setTimeout(() => showToast(`Achievement unlocked: ${a.sym} ${a.title} — ${a.desc}`), 700);
       }
     });
     if (changed) {
       save();
-      if (!silent) celebrate();
+      if (!silent) {
+        if (niceJustUnlocked) {
+          playNiceCutscene(() => {
+            celebrate();
+            showToast('Achievement unlocked: 69 Nice — Log exactly 69 minutes in one session.');
+          });
+        } else {
+          celebrate();
+        }
+      }
     }
+  }
+
+  // ---------- 'Nice' cutscene ----------
+  // A detective works a dark street under a flickering lamp until the
+  // magnifying glass finds the badge. Click anywhere to skip.
+
+  const NICE_CUTSCENE_SVG = `
+<svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" class="cs-svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="csLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe9a8" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffe9a8" stop-opacity="0.06"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="#0a0e18"/>
+  <g fill="#c8d4ee">
+    <circle cx="80" cy="60" r="1.5" class="cs-star"/>
+    <circle cx="200" cy="100" r="1" class="cs-star s2"/>
+    <circle cx="330" cy="50" r="1.2" class="cs-star s3"/>
+    <circle cx="470" cy="90" r="1.2" class="cs-star s2"/>
+    <circle cx="640" cy="70" r="1.4" class="cs-star s3"/>
+    <circle cx="730" cy="130" r="1" class="cs-star"/>
+  </g>
+  <g fill="#10152a">
+    <rect x="0" y="150" width="120" height="260"/>
+    <rect x="130" y="190" width="90" height="220"/>
+    <rect x="240" y="120" width="110" height="290"/>
+    <rect x="600" y="160" width="100" height="250"/>
+    <rect x="710" y="120" width="90" height="290"/>
+  </g>
+  <g fill="#2a3352">
+    <rect x="20" y="180" width="14" height="18"/>
+    <rect x="60" y="240" width="14" height="18"/>
+    <rect x="270" y="160" width="14" height="18"/>
+    <rect x="310" y="220" width="14" height="18"/>
+    <rect x="630" y="200" width="14" height="18"/>
+    <rect x="740" y="170" width="14" height="18"/>
+  </g>
+  <rect x="0" y="410" width="800" height="40" fill="#0c101f"/>
+  <rect x="0" y="406" width="800" height="6" fill="#161c33"/>
+  <g class="cs-flicker">
+    <polygon points="560,120 480,410 640,410" fill="url(#csLight)"/>
+    <ellipse cx="560" cy="410" rx="95" ry="12" fill="#f5d98b" opacity="0.25"/>
+    <circle cx="560" cy="116" r="10" fill="#ffe9a8"/>
+  </g>
+  <g fill="#232a44">
+    <rect x="556" y="120" width="8" height="290"/>
+    <rect x="544" y="404" width="32" height="8" rx="2"/>
+    <rect x="546" y="104" width="28" height="10" rx="4"/>
+  </g>
+  <g class="cs-badge" transform="translate(505 392)">
+    <rect x="-16" y="-12" width="32" height="24" rx="6" fill="#2a78d6"/>
+    <text x="0" y="6" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">69</text>
+  </g>
+  <g class="cs-detective">
+    <g class="cs-bob">
+      <g transform="translate(0 408)">
+        <rect x="-12" y="-14" width="9" height="14" fill="#151b30"/>
+        <rect x="3" y="-14" width="9" height="14" fill="#151b30"/>
+        <path d="M -15 -12 L -19 -50 Q 0 -60 19 -50 L 15 -12 Q 0 -6 -15 -12 Z" fill="#1d2440"/>
+        <circle cx="0" cy="-66" r="9" fill="#1d2440"/>
+        <rect x="-15" y="-76" width="30" height="5" rx="2.5" fill="#151b30"/>
+        <rect x="-9" y="-87" width="18" height="12" rx="3" fill="#151b30"/>
+        <g class="cs-glass">
+          <line x1="10" y1="-46" x2="30" y2="-38" stroke="#1d2440" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="38" cy="-34" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>`;
+
+  function playNiceCutscene(done) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      done();
+      return;
+    }
+    const overlay = document.createElement('div');
+    overlay.className = 'cutscene';
+    overlay.innerHTML = NICE_CUTSCENE_SVG +
+      '<div class="cutscene-reveal">' +
+      '<div class="cutscene-badge">69</div>' +
+      '<div class="cutscene-title">NICE.</div>' +
+      '<div class="cutscene-sub">Achievement found: log exactly 69 minutes.</div>' +
+      '</div>' +
+      '<div class="cutscene-skip">Click to skip</div>';
+    document.body.appendChild(overlay);
+
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      overlay.classList.add('cutscene-out');
+      setTimeout(() => {
+        overlay.remove();
+        done();
+      }, 500);
+    };
+    overlay.addEventListener('click', finish);
+    setTimeout(finish, 8600);
   }
 
   // Two party poppers of confetti from the bottom corners.
