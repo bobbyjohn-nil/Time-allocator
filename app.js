@@ -491,17 +491,28 @@
     <text x="0" y="6" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">69</text>
   </g>
   <g class="cs-detective">
-    <g class="cs-bob">
-      <g transform="translate(0 408)">
-        <rect x="-12" y="-14" width="9" height="14" fill="#151b30"/>
-        <rect x="3" y="-14" width="9" height="14" fill="#151b30"/>
-        <path d="M -15 -12 L -19 -50 Q 0 -60 19 -50 L 15 -12 Q 0 -6 -15 -12 Z" fill="#1d2440"/>
-        <circle cx="0" cy="-66" r="9" fill="#1d2440"/>
-        <rect x="-15" y="-76" width="30" height="5" rx="2.5" fill="#151b30"/>
-        <rect x="-9" y="-87" width="18" height="12" rx="3" fill="#151b30"/>
-        <g class="cs-glass">
-          <line x1="10" y1="-46" x2="30" y2="-38" stroke="#1d2440" stroke-width="5" stroke-linecap="round"/>
-          <circle cx="38" cy="-34" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
+    <g class="cs-flip">
+      <g class="cs-bob">
+        <g transform="translate(0 408)">
+          <rect x="-14" y="-12" width="10" height="12" fill="#151b30"/>
+          <rect x="4" y="-12" width="10" height="12" fill="#151b30"/>
+          <path d="M -22 0 L -27 -38 L -20 -58 Q 0 -70 20 -58 L 27 -38 L 22 0 Q 0 6 -22 0 Z" fill="#1d2440"/>
+          <path d="M -20 -58 L -13 -86 L -1 -62 Z" fill="#242e52"/>
+          <path d="M 20 -58 L 13 -86 L 1 -62 Z" fill="#242e52"/>
+          <rect x="-12" y="-86" width="24" height="10" fill="#0b0f1c"/>
+          <rect x="-20" y="-91" width="40" height="5" rx="2.5" fill="#151b30"/>
+          <rect x="-12" y="-104" width="24" height="14" rx="3" fill="#151b30"/>
+          <g class="cs-smoke" fill="#9aa7c9">
+            <circle cx="24" cy="-90" r="2" class="cs-puff"/>
+            <circle cx="27" cy="-97" r="2.5" class="cs-puff p2"/>
+            <circle cx="30" cy="-105" r="3" class="cs-puff p3"/>
+          </g>
+          <line x1="6" y1="-79" x2="18" y2="-74" stroke="#3a2a1c" stroke-width="3.5" stroke-linecap="round"/>
+          <rect x="15" y="-81" width="7" height="8" rx="2" fill="#3a2a1c"/>
+          <g class="cs-glass">
+            <line x1="12" y1="-44" x2="32" y2="-36" stroke="#1d2440" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="40" cy="-32" r="9" fill="rgba(200,220,255,0.14)" stroke="#8fa3c7" stroke-width="2.5"/>
+          </g>
         </g>
       </g>
     </g>
