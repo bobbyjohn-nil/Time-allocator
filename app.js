@@ -525,9 +525,8 @@
           <g>
             <polygon points="-14,0 -7,-16 -1,-16 -7,0" fill="#151b30"/>
             <polygon points="5,0 2,-16 9,-16 15,0" fill="#151b30"/>
-            <path d="M -13 -30 L -32 -16 L -13 -8 Z" fill="#1a2140"/>
-            <path d="M -13 -2 L -17 -34 L 13 -34 L 16 -2 Q 0 4 -13 -2 Z" fill="#1d2440"/>
-            <path d="M -19 -34 L -13 -60 Q 2 -68 15 -61 L 21 -34 Q 0 -26 -19 -34 Z" fill="#232c4d"/>
+            <path d="M -32 -6 L -15 -44 L -11 -58 Q 2 -68 14 -60 L 18 -44 L 24 -6 Z" fill="#1d2440"/>
+            <path d="M -17 -42 Q 1 -35 19 -43" stroke="#151b30" stroke-width="2" fill="none"/>
             <path d="M -10 -60 L -8 -80 L 6 -62 Z" fill="#2a3560"/>
             <path d="M 14 -60 L 20 -78 L 4 -62 Z" fill="#2a3560"/>
             <rect x="-4" y="-78" width="20" height="7" fill="#0b0f1c"/>

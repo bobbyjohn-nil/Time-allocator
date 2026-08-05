@@ -684,13 +684,13 @@ select, input[type="text"], input[type="number"] {
 
 @keyframes cs-camera {
   0% { transform: translate(400px, 225px) rotate(0deg) scale(1.1) translate(-400px, -300px); }
-  9% { transform: translate(400px, 225px) rotate(-3deg) scale(1.2) translate(-436px, -290px); }
-  14% { transform: translate(400px, 225px) rotate(2deg) scale(1.3) translate(-443px, -292px); }
-  23% { transform: translate(400px, 225px) rotate(-4deg) scale(1.35) translate(-345px, -300px); }
-  28% { transform: translate(400px, 225px) rotate(3deg) scale(1.5) translate(-338px, -305px); }
-  37% { transform: translate(400px, 225px) rotate(-5deg) scale(1.55) translate(-461px, -330px); }
-  41% { transform: translate(400px, 225px) rotate(4deg) scale(1.7) translate(-430px, -340px); }
-  57% { transform: translate(400px, 225px) rotate(-2deg) scale(1.8) translate(-465px, -380px); }
+  6% { transform: translate(400px, 225px) rotate(-3deg) scale(1.2) translate(-431px, -285px); }
+  15% { transform: translate(400px, 225px) rotate(2deg) scale(1.3) translate(-441px, -290px); }
+  21% { transform: translate(400px, 225px) rotate(-4deg) scale(1.4) translate(-351px, -295px); }
+  29% { transform: translate(400px, 225px) rotate(3deg) scale(1.5) translate(-338px, -305px); }
+  34% { transform: translate(400px, 225px) rotate(-5deg) scale(1.55) translate(-456px, -325px); }
+  38% { transform: translate(400px, 225px) rotate(3deg) scale(1.7) translate(-428px, -335px); }
+  57% { transform: translate(400px, 225px) rotate(-2deg) scale(1.8) translate(-462px, -380px); }
   64% { transform: translate(400px, 225px) rotate(1deg) scale(2.2) translate(-495px, -390px); }
   72% { transform: translate(400px, 225px) rotate(-1deg) scale(2.6) translate(-500px, -392px); }
   100% { transform: translate(400px, 225px) rotate(0deg) scale(2.7) translate(-500px, -392px); }
@@ -744,17 +744,17 @@ select, input[type="text"], input[type="number"] {
 }
 
 /* Lateral darting across the road (in road-local units, so the sweeps
-   grow as he gets closer). */
-.cs-dart { animation: cs-dart 4.8s ease-in-out forwards; }
+   grow as he gets closer). Short, fast dashes with real pauses. */
+.cs-dart { animation: cs-dart 4.8s cubic-bezier(0.5, 0, 0.2, 1) forwards; }
 
 @keyframes cs-dart {
   0% { transform: translateX(-80px); }
-  16% { transform: translateX(120px); }
-  24% { transform: translateX(120px); }
-  40% { transform: translateX(-120px); }
-  48% { transform: translateX(-120px); }
-  64% { transform: translateX(90px); }
-  72% { transform: translateX(40px); }
+  10% { transform: translateX(120px); }
+  26% { transform: translateX(120px); }
+  36% { transform: translateX(-120px); }
+  50% { transform: translateX(-120px); }
+  60% { transform: translateX(90px); }
+  66% { transform: translateX(40px); }
   100% { transform: translateX(55px); }
 }
 
@@ -766,18 +766,11 @@ select, input[type="text"], input[type="number"] {
 }
 
 @keyframes cs-flip {
-  0%, 23.5% { transform: scaleX(1); }
-  24%, 47.5% { transform: scaleX(-1); }
-  48%, 63.5% { transform: scaleX(1); }
-  64%, 71.5% { transform: scaleX(-1); }
-  72%, 100% { transform: scaleX(1); }
-}
-
-.cs-bob { animation: cs-bob 0.28s ease-in-out 17; }
-
-@keyframes cs-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  0%, 25.5% { transform: scaleX(1); }
+  26%, 49.5% { transform: scaleX(-1); }
+  50%, 59.5% { transform: scaleX(1); }
+  60%, 65.5% { transform: scaleX(-1); }
+  66%, 100% { transform: scaleX(1); }
 }
 
 .cs-glass {
