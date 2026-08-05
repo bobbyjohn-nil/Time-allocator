@@ -462,61 +462,89 @@
     <circle cx="640" cy="70" r="1.4" class="cs-star s3"/>
     <circle cx="730" cy="130" r="1" class="cs-star"/>
   </g>
-  <g fill="#141c3f" opacity="0.4">
-    <polygon points="90,-225 190,-225 40,410 -30,410"/>
-    <polygon points="660,-225 730,-225 880,410 790,410"/>
-  </g>
-  <g class="cs-float">
-    <circle cx="170" cy="120" r="24" fill="#1a2547" opacity="0.6"/>
-  </g>
   <g class="cs-float f2">
-    <circle cx="350" cy="85" r="15" fill="none" stroke="#223065" stroke-width="3" opacity="0.7"/>
-  </g>
-  <g class="cs-float f3">
-    <polygon points="690,80 712,118 668,118" fill="#1a2547" opacity="0.55"/>
-  </g>
-  <g class="cs-float f2">
-    <rect x="486" y="130" width="20" height="20" fill="#182246" opacity="0.5" transform="rotate(35 496 140)"/>
+    <circle cx="398" cy="72" r="14" fill="none" stroke="#223065" stroke-width="3" opacity="0.6"/>
   </g>
   <rect x="-400" y="245" width="1600" height="700" fill="#0b0f1d"/>
   <rect x="-400" y="242" width="1600" height="5" fill="#161c33"/>
-  <g fill="#10152a">
-    <polygon points="-400,450 -400,140 -80,150 180,215 345,248 345,450"/>
-    <polygon points="1200,450 1200,140 880,150 620,215 455,248 455,450"/>
+  <!-- far buildings -->
+  <rect x="296" y="106" width="62" height="8" fill="#0e1425"/>
+  <rect x="300" y="112" width="54" height="168" fill="#11172c"/>
+  <g fill="#232c48">
+    <rect x="310" y="140" width="10" height="14"/>
+    <rect x="332" y="200" width="10" height="14"/>
   </g>
-  <g fill="#151d3a" opacity="0.85">
-    <polygon points="90,450 150,190 235,242 265,450"/>
-    <polygon points="710,450 650,190 565,242 535,450"/>
+  <rect x="442" y="106" width="64" height="8" fill="#0e1425"/>
+  <rect x="446" y="112" width="56" height="168" fill="#11172c"/>
+  <rect x="458" y="150" width="10" height="14" fill="#232c48"/>
+  <rect x="480" y="200" width="10" height="14" fill="#c9a86a" opacity="0.8"/>
+  <!-- mid buildings -->
+  <rect x="214" y="50" width="96" height="10" fill="#0e1425"/>
+  <rect x="218" y="58" width="88" height="264" fill="#131a30"/>
+  <g fill="#242e4e">
+    <rect x="234" y="90" width="12" height="18"/>
+    <rect x="282" y="150" width="12" height="18"/>
+    <rect x="234" y="230" width="12" height="18"/>
   </g>
-  <g fill="#2a3352" opacity="0.85">
-    <rect x="140" y="230" width="10" height="14" transform="rotate(8 145 237)"/>
-    <rect x="215" y="270" width="10" height="14" transform="rotate(-6 220 277)"/>
-    <rect x="105" y="320" width="12" height="16" transform="rotate(10 111 328)"/>
-    <rect x="645" y="230" width="10" height="14" transform="rotate(-8 650 237)"/>
-    <rect x="580" y="280" width="10" height="14" transform="rotate(6 585 287)"/>
-    <rect x="690" y="330" width="12" height="16" transform="rotate(-10 696 338)"/>
+  <rect x="258" y="150" width="12" height="18" fill="#c9a86a" opacity="0.8"/>
+  <rect x="490" y="50" width="96" height="10" fill="#0e1425"/>
+  <rect x="494" y="58" width="88" height="264" fill="#131a30"/>
+  <g fill="#242e4e">
+    <rect x="508" y="90" width="12" height="18"/>
+    <rect x="556" y="170" width="12" height="18"/>
+    <rect x="508" y="240" width="12" height="18"/>
   </g>
+  <rect x="532" y="120" width="12" height="18" fill="#c9a86a" opacity="0.8"/>
+  <!-- near buildings -->
+  <rect x="70" y="-100" width="162" height="12" fill="#0e1425"/>
+  <rect x="76" y="-90" width="150" height="495" fill="#162040"/>
+  <g fill="#28335a">
+    <rect x="100" y="20" width="18" height="26"/>
+    <rect x="170" y="90" width="18" height="26"/>
+    <rect x="100" y="170" width="18" height="26"/>
+    <rect x="170" y="240" width="18" height="26"/>
+    <rect x="100" y="310" width="18" height="26"/>
+  </g>
+  <rect x="170" y="170" width="18" height="26" fill="#c9a86a" opacity="0.75"/>
+  <rect x="152" y="358" width="28" height="47" fill="#0e1425"/>
+  <rect x="574" y="-100" width="162" height="12" fill="#0e1425"/>
+  <rect x="580" y="-90" width="150" height="495" fill="#162040"/>
+  <g fill="#28335a">
+    <rect x="686" y="20" width="18" height="26"/>
+    <rect x="616" y="90" width="18" height="26"/>
+    <rect x="686" y="170" width="18" height="26"/>
+    <rect x="616" y="240" width="18" height="26"/>
+    <rect x="686" y="310" width="18" height="26"/>
+  </g>
+  <rect x="616" y="170" width="18" height="26" fill="#c9a86a" opacity="0.75"/>
+  <!-- sidewalks with curbs -->
+  <polygon points="352,248 368,248 80,450 10,450" fill="#12172b"/>
+  <polygon points="448,248 432,248 720,450 790,450" fill="#12172b"/>
+  <polygon points="366,248 368,248 80,450 72,450" fill="#1c2440"/>
+  <polygon points="434,248 432,248 720,450 728,450" fill="#1c2440"/>
+  <!-- road -->
   <polygon points="368,248 432,248 720,450 80,450" fill="#0c101f"/>
   <g fill="#1a2342">
-    <rect x="397" y="268" width="5" height="12"/>
-    <rect x="393" y="298" width="7" height="16"/>
-    <rect x="387" y="336" width="9" height="20"/>
-    <rect x="379" y="384" width="12" height="26"/>
+    <rect x="398" y="262" width="4" height="9"/>
+    <rect x="397.25" y="284" width="5.5" height="13"/>
+    <rect x="396" y="313" width="8" height="18"/>
+    <rect x="394.5" y="350" width="11" height="24"/>
+    <rect x="392.5" y="396" width="15" height="32"/>
   </g>
   <g class="cs-flicker">
-    <polygon points="620,150 500,435 740,435" fill="url(#csLight)"/>
-    <ellipse cx="615" cy="432" rx="110" ry="13" fill="#f5d98b" opacity="0.25"/>
-    <circle cx="620" cy="146" r="11" fill="#ffe9a8"/>
+    <polygon points="701,150 560,448 830,448" fill="url(#csLight)"/>
+    <ellipse cx="690" cy="444" rx="130" ry="12" fill="#f5d98b" opacity="0.25"/>
+    <circle cx="701" cy="146" r="11" fill="#ffe9a8"/>
   </g>
   <g fill="#232a44">
-    <rect x="615" y="150" width="9" height="282"/>
-    <rect x="600" y="426" width="38" height="9" rx="2"/>
-    <rect x="603" y="132" width="34" height="12" rx="5"/>
+    <rect x="696" y="150" width="9" height="286"/>
+    <rect x="681" y="432" width="38" height="9" rx="2"/>
+    <rect x="684" y="132" width="34" height="12" rx="5"/>
   </g>
-  <g class="cs-badge" transform="translate(520 402)">
-    <rect x="-16" y="-12" width="32" height="24" rx="6" fill="#2a78d6"/>
-    <circle cx="-3" cy="-2" r="5.5" fill="none" stroke="#ffffff" stroke-width="2.2"/>
-    <line x1="1.5" y1="2.5" x2="8" y2="8" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
+  <g class="cs-badge" transform="translate(600 412)">
+    <rect x="-14" y="-14" width="28" height="28" rx="6" fill="#2a78d6"/>
+    <circle cx="-3" cy="-3" r="5.5" fill="none" stroke="#ffffff" stroke-width="2.2"/>
+    <line x1="1.5" y1="1.5" x2="8" y2="8" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
   </g>
   <g class="cs-approach">
     <g class="cs-dart">
@@ -540,6 +568,8 @@
               <circle cx="8" cy="-86" r="5"/>
               <rect x="-9" y="-86" width="4" height="9" rx="2"/>
             </g>
+            <path d="M -12 -86 Q -13 -97 1 -98 Q 14 -98 13 -88 Q 0 -84 -12 -86 Z" fill="#4a4438"/>
+            <path d="M 13 -88 L 21 -86 Q 13 -83 10 -85 Z" fill="#3a352b"/>
             <g class="cs-smoke" fill="#9aa7c9">
               <circle cx="22" cy="-80" r="2" class="cs-puff"/>
               <circle cx="26" cy="-89" r="2.5" class="cs-puff p2"/>

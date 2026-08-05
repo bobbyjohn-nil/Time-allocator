@@ -690,10 +690,10 @@ select, input[type="text"], input[type="number"] {
   29% { transform: translate(400px, 225px) rotate(3deg) scale(1.5) translate(-338px, -305px); }
   34% { transform: translate(400px, 225px) rotate(-5deg) scale(1.55) translate(-456px, -325px); }
   38% { transform: translate(400px, 225px) rotate(3deg) scale(1.7) translate(-428px, -335px); }
-  57% { transform: translate(400px, 225px) rotate(-2deg) scale(1.8) translate(-462px, -380px); }
-  64% { transform: translate(400px, 225px) rotate(1deg) scale(2.2) translate(-495px, -390px); }
-  72% { transform: translate(400px, 225px) rotate(-1deg) scale(2.6) translate(-500px, -392px); }
-  100% { transform: translate(400px, 225px) rotate(0deg) scale(2.7) translate(-500px, -392px); }
+  57% { transform: translate(400px, 225px) rotate(-2deg) scale(1.8) translate(-555px, -388px); }
+  64% { transform: translate(400px, 225px) rotate(1deg) scale(2.2) translate(-585px, -398px); }
+  72% { transform: translate(400px, 225px) rotate(-1deg) scale(2.6) translate(-592px, -400px); }
+  100% { transform: translate(400px, 225px) rotate(0deg) scale(2.7) translate(-592px, -400px); }
 }
 
 .cs-float {
@@ -739,8 +739,8 @@ select, input[type="text"], input[type="number"] {
   0% { transform: translate(400px, 250px) scale(0.22); }
   20% { transform: translate(400px, 268px) scale(0.3); }
   45% { transform: translate(400px, 298px) scale(0.48); }
-  70% { transform: translate(405px, 340px) scale(0.72); }
-  100% { transform: translate(400px, 405px) scale(1.1); }
+  70% { transform: translate(430px, 340px) scale(0.72); }
+  100% { transform: translate(505px, 410px) scale(1.1); }
 }
 
 /* Lateral darting across the road (in road-local units, so the sweeps
@@ -826,8 +826,8 @@ select, input[type="text"], input[type="number"] {
 }
 
 .cutscene-badge {
-  width: 84px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: 14px;
   background: #2a78d6;
   color: #ffffff;
