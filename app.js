@@ -541,6 +541,8 @@
     <rect x="681" y="432" width="38" height="9" rx="2"/>
     <rect x="684" y="132" width="34" height="12" rx="5"/>
   </g>
+  <ellipse cx="600" cy="417" rx="30" ry="7.5" fill="#18233f"/>
+  <ellipse cx="591" cy="415" rx="11" ry="2.5" fill="#2b3d66" opacity="0.7"/>
   <g class="cs-badge" transform="translate(600 412)">
     <rect x="-14" y="-14" width="28" height="28" rx="6" fill="#2a78d6"/>
     <circle cx="-3" cy="-3" r="5.5" fill="none" stroke="#ffffff" stroke-width="2.2"/>
@@ -599,7 +601,8 @@
     overlay.className = 'cutscene';
     overlay.innerHTML = NICE_CUTSCENE_SVG +
       '<div class="cutscene-reveal">' +
-      '<div class="cutscene-badge"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="21" y2="21"/></svg></div>' +
+      '<div class="cutscene-badge"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="21" y2="21"/></svg>' +
+      '<span class="cutscene-drip d1"></span><span class="cutscene-drip d2"></span><span class="cutscene-drip d3"></span></div>' +
       '<div class="cutscene-title">NICE.</div>' +
       '<div class="cutscene-sub">Achievement found: log exactly 69 minutes.</div>' +
       '</div>' +
@@ -617,7 +620,7 @@
       }, 500);
     };
     overlay.addEventListener('click', finish);
-    setTimeout(finish, 8600);
+    setTimeout(finish, 9200);
   }
 
   // Two party poppers of confetti from the bottom corners.
