@@ -334,7 +334,8 @@
       if (a.test().done && !state.unlocked[a.id]) {
         state.unlocked[a.id] = Date.now();
         changed = true;
-        if (!silent) showToast(`Achievement unlocked: ${a.sym} ${a.title} — ${a.desc}`);
+        // Delayed so it outlives the 'Logged Xm' toast the caller shows next.
+        if (!silent) setTimeout(() => showToast(`Achievement unlocked: ${a.sym} ${a.title} — ${a.desc}`), 700);
       }
     });
     if (changed) {
