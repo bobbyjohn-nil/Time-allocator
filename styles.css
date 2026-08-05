@@ -774,31 +774,31 @@ select, input[type="text"], input[type="number"] {
 }
 
 /* The arm pivots at the shoulder (bbox top-left + stroke ≈ shoulder
-   joint). Mostly small irregular searching moves, occasionally raising
-   the glass up to the eye for a closer look. */
+   joint). Small irregular searching moves with one mid-route look
+   through the glass, then — timed to his arrival at the lamp post at
+   ~4.8s — the glass comes up to the eye and stays there through the
+   badge discovery and reveal. */
 .cs-glass {
   transform-box: fill-box;
   transform-origin: 4px 4px;
-  animation: cs-search 7.2s linear infinite;
+  animation: cs-search 8.5s linear forwards;
 }
 
 @keyframes cs-search {
   0% { transform: rotate(0deg); }
   6% { transform: rotate(-8deg); }
-  10% { transform: rotate(-4deg); }
+  11% { transform: rotate(-4deg); }
   18% { transform: rotate(-10deg); }
-  22% { transform: rotate(2deg); }
-  30% { transform: rotate(-2deg); }
-  36% { transform: rotate(-78deg); }
-  46% { transform: rotate(-74deg); }
-  52% { transform: rotate(-6deg); }
-  60% { transform: rotate(0deg); }
-  66% { transform: rotate(-12deg); }
-  72% { transform: rotate(-8deg); }
-  80% { transform: rotate(-80deg); }
-  86% { transform: rotate(-76deg); }
-  92% { transform: rotate(-10deg); }
-  100% { transform: rotate(0deg); }
+  23% { transform: rotate(2deg); }
+  28% { transform: rotate(-70deg); }
+  36% { transform: rotate(-66deg); }
+  42% { transform: rotate(-6deg); }
+  48% { transform: rotate(-10deg); }
+  54% { transform: rotate(-4deg); }
+  60% { transform: rotate(-72deg); }
+  66% { transform: rotate(-68deg); }
+  74% { transform: rotate(-71deg); }
+  100% { transform: rotate(-69deg); }
 }
 
 .cs-puff { animation: cs-puff 1.6s ease-out infinite; }
@@ -937,6 +937,8 @@ select, input[type="text"], input[type="number"] {
   opacity: 0;
   will-change: transform, opacity;
 }
+
+.confetti-piece svg { display: block; }
 
 /* ---------- Tooltip & toast ---------- */
 .tooltip {

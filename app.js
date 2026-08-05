@@ -429,7 +429,7 @@
       if (!silent) {
         if (niceJustUnlocked) {
           playNiceCutscene(() => {
-            celebrate();
+            celebrate('pipes');
             showToast('Achievement unlocked: Nice — Log exactly 69 minutes in one session.');
           });
         } else {
@@ -580,7 +580,7 @@
             <path d="M 8 -78 L 9 -75 L 19 -68 L 20 -72 Z" fill="#3a2a1e"/>
             <path d="M 19 -73 L 19 -65 Q 19 -59 24.5 -59 Q 30 -59 30 -65 L 30 -73 Z" fill="#5a4030"/>
             <ellipse cx="24.5" cy="-73" rx="5.5" ry="1.8" fill="#241a12"/>
-            <g transform="translate(2 -54)">
+            <g transform="translate(3 -60)">
               <g class="cs-glass">
                 <line x1="0" y1="0" x2="12" y2="12" stroke="#737d92" stroke-width="7.5" stroke-linecap="round"/>
                 <line x1="12" y1="12" x2="26" y2="18" stroke="#737d92" stroke-width="6" stroke-linecap="round"/>
@@ -629,8 +629,14 @@
     setTimeout(finish, 9200);
   }
 
-  // Two party poppers of confetti from the bottom corners.
-  function celebrate() {
+  // Two party poppers of confetti from the bottom corners. kind 'pipes'
+  // rains little detective pipes instead of paper bits.
+  const PIPE_CONFETTI_SVG =
+    '<svg width="18" height="14" viewBox="0 0 18 14" fill="currentColor" aria-hidden="true">' +
+    '<path d="M0 2 L1 5 L10 8 L10 4 Z"/><path d="M9 4 L9 9 Q9 13 12.5 13 Q16 13 16 9 L16 4 Z"/></svg>';
+  const PIPE_COLORS = ['#7a5a3a', '#8a6a4a', '#5a4030', '#a37c52'];
+
+  function celebrate(kind) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const container = document.createElement('div');
     container.className = 'confetti';
@@ -645,11 +651,18 @@
       for (let i = 0; i < 45; i++) {
         const p = document.createElement('div');
         p.className = 'confetti-piece';
-        p.style.background = `var(--series-${(i % SERIES_SLOTS) + 1})`;
-        const w = 5 + Math.random() * 6;
-        p.style.width = `${w}px`;
-        p.style.height = `${Math.random() < 0.5 ? w : w * 0.4}px`;
-        if (Math.random() < 0.3) p.style.borderRadius = '50%';
+        let scale = 1;
+        if (kind === 'pipes') {
+          p.innerHTML = PIPE_CONFETTI_SVG;
+          p.style.color = PIPE_COLORS[i % PIPE_COLORS.length];
+          scale = 0.7 + Math.random() * 0.9;
+        } else {
+          p.style.background = `var(--series-${(i % SERIES_SLOTS) + 1})`;
+          const w = 5 + Math.random() * 6;
+          p.style.width = `${w}px`;
+          p.style.height = `${Math.random() < 0.5 ? w : w * 0.4}px`;
+          if (Math.random() < 0.3) p.style.borderRadius = '50%';
+        }
         p.style.left = `${b.x}px`;
         p.style.top = `${b.y}px`;
         container.appendChild(p);
@@ -661,9 +674,9 @@
         const fall = 300 + Math.random() * 350;
         const rot = (Math.random() - 0.5) * 1080;
         p.animate([
-          { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
-          { transform: `translate(${dx * 0.7}px, ${dy * 0.7}px) rotate(${rot * 0.5}deg)`, opacity: 1, offset: 0.35 },
-          { transform: `translate(${dx}px, ${dy + fall}px) rotate(${rot}deg)`, opacity: 0 },
+          { transform: `translate(0, 0) rotate(0deg) scale(${scale})`, opacity: 1 },
+          { transform: `translate(${dx * 0.7}px, ${dy * 0.7}px) rotate(${rot * 0.5}deg) scale(${scale})`, opacity: 1, offset: 0.35 },
+          { transform: `translate(${dx}px, ${dy + fall}px) rotate(${rot}deg) scale(${scale})`, opacity: 0 },
         ], { duration: 2800 + Math.random() * 1600, easing: 'cubic-bezier(0.15, 0.6, 0.35, 1)' });
       }
     });
