@@ -1324,53 +1324,105 @@
 
   function renderHistory() {
     historyList.innerHTML = '';
-    const recent = [...state.sessions].sort((a, b) => b.timestamp - a.timestamp).slice(0, 100);
+    const recent = [...state.sessions].sort((a, b) => b.timestamp - a.timestamp).slice(0, 200);
     historyEmpty.style.display = recent.length ? 'none' : '';
     historySummary.textContent = state.sessions.length
-      ? `${state.sessions.length} session${state.sessions.length === 1 ? '' : 's'} · ${fmtDuration(totalTracked())} tracked in total${state.sessions.length > 100 ? ' · showing the last 100' : ''}`
+      ? `${state.sessions.length} session${state.sessions.length === 1 ? '' : 's'} · ${fmtDuration(totalTracked())} tracked in total${state.sessions.length > 200 ? ' · showing the last 200' : ''}`
       : '';
 
+    // Group into days, newest first; today starts expanded.
+    const days = [];
+    const byDay = new Map();
     recent.forEach(s => {
-      const act = state.activities.find(a => a.id === s.activityId)
-        || state.projects.find(p => p.id === s.activityId);
-      const li = document.createElement('li');
-      li.className = 'history-item';
-
-      const sw = document.createElement('span');
-      sw.className = 'swatch';
-      sw.style.background = act ? colorFor(act) : 'var(--series-other)';
-
-      const name = document.createElement('span');
-      name.textContent = act ? act.name : '(deleted activity)';
-
-      const mins = document.createElement('span');
-      mins.className = 'history-mins';
-      mins.textContent = fmtDuration(s.minutes);
-
-      const focus = document.createElement('span');
-      focus.className = 'history-focus';
-      if (s.focus && FOCUS_LEVELS[s.focus]) {
-        focus.textContent = FOCUS_LEVELS[s.focus].sym;
-        focus.title = FOCUS_LEVELS[s.focus].label;
+      const d = new Date(s.timestamp);
+      d.setHours(0, 0, 0, 0);
+      const key = d.getTime();
+      if (!byDay.has(key)) {
+        byDay.set(key, []);
+        days.push(key);
       }
-
-      const when = document.createElement('span');
-      when.className = 'history-when';
-      when.textContent = fmtWhen(s.timestamp);
-
-      const del = document.createElement('button');
-      del.className = 'icon-btn danger';
-      del.title = 'Delete session';
-      del.textContent = '✕';
-      del.addEventListener('click', () => {
-        state.sessions = state.sessions.filter(x => x.id !== s.id);
-        save();
-        render();
-      });
-
-      li.append(sw, name, mins, focus, when, del);
-      historyList.appendChild(li);
+      byDay.get(key).push(s);
     });
+
+    days.forEach((key, i) => {
+      const sessions = byDay.get(key);
+      const total = sessions.reduce((a, s) => a + s.minutes, 0);
+
+      const details = document.createElement('details');
+      details.className = 'history-day';
+      if (i === 0) details.open = true;
+
+      const summary = document.createElement('summary');
+      const caret = document.createElement('span');
+      caret.className = 'history-caret';
+      caret.textContent = '▸';
+      const label = document.createElement('span');
+      label.className = 'history-day-label';
+      label.textContent = dayLabel(key);
+      const meta = document.createElement('span');
+      meta.className = 'history-day-meta';
+      meta.textContent = `${sessions.length} session${sessions.length === 1 ? '' : 's'} · ${fmtDuration(total)}`;
+      summary.append(caret, label, meta);
+      details.appendChild(summary);
+
+      const ul = document.createElement('ul');
+      ul.className = 'history-list';
+      sessions.forEach(s => ul.appendChild(historyItem(s)));
+      details.appendChild(ul);
+
+      historyList.appendChild(details);
+    });
+  }
+
+  function dayLabel(dayTs) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((today.getTime() - dayTs) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    return new Date(dayTs).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function historyItem(s) {
+    const act = state.activities.find(a => a.id === s.activityId)
+      || state.projects.find(p => p.id === s.activityId);
+    const li = document.createElement('li');
+    li.className = 'history-item';
+
+    const sw = document.createElement('span');
+    sw.className = 'swatch';
+    sw.style.background = act ? colorFor(act) : 'var(--series-other)';
+
+    const name = document.createElement('span');
+    name.textContent = act ? act.name : '(deleted activity)';
+
+    const mins = document.createElement('span');
+    mins.className = 'history-mins';
+    mins.textContent = fmtDuration(s.minutes);
+
+    const focus = document.createElement('span');
+    focus.className = 'history-focus';
+    if (s.focus && FOCUS_LEVELS[s.focus]) {
+      focus.textContent = FOCUS_LEVELS[s.focus].sym;
+      focus.title = FOCUS_LEVELS[s.focus].label;
+    }
+
+    const when = document.createElement('span');
+    when.className = 'history-when';
+    when.textContent = new Date(s.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+    const del = document.createElement('button');
+    del.className = 'icon-btn danger';
+    del.title = 'Delete session';
+    del.textContent = '✕';
+    del.addEventListener('click', () => {
+      state.sessions = state.sessions.filter(x => x.id !== s.id);
+      save();
+      render();
+    });
+
+    li.append(sw, name, mins, focus, when, del);
+    return li;
   }
 
   function renderAchievements() {

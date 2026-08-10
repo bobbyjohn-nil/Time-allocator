@@ -524,6 +524,38 @@ select, input[type="text"], input[type="number"] {
 .custom-log input { width: 110px; }
 
 /* ---------- History ---------- */
+.history-days { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+
+.history-day {
+  border: 1px solid var(--gridline);
+  border-radius: 10px;
+  padding: 0 12px;
+}
+
+.history-day summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.history-day summary::-webkit-details-marker { display: none; }
+
+.history-caret {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  transition: transform 0.15s ease;
+}
+
+.history-day[open] .history-caret { transform: rotate(90deg); }
+
+.history-day-label { font-weight: 500; }
+.history-day-meta { margin-left: auto; font-size: 0.8rem; color: var(--text-muted); }
+
+.history-day .history-list { border-top: 1px solid var(--gridline); padding-bottom: 4px; }
+
 .history-list { list-style: none; margin: 0; padding: 0; }
 
 .history-item {
