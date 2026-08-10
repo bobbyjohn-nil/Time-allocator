@@ -29,7 +29,8 @@
           <button type="button" class="mode-btn active" data-mode="unknown">Not sure how long</button>
           <button type="button" class="mode-btn" data-mode="fixed">I have a set time</button>
         </div>
-        <div id="fixed-controls" class="fixed-controls" hidden>
+        <div id="fixed-wrap" class="reveal-wrap">
+        <div id="fixed-controls" class="fixed-controls">
           <label class="time-input">
             <input type="number" id="have-hours" min="0" max="24" step="1" value="1" aria-label="Hours available"> h
           </label>
@@ -39,6 +40,7 @@
           <label class="split-toggle">
             <input type="checkbox" id="split-toggle"> Break it into segments
           </label>
+        </div>
         </div>
         <button id="ask-btn" class="btn btn-hero">What should I do?</button>
         <div id="recommendation" class="recommendation hidden" aria-live="polite"></div>
@@ -93,8 +95,12 @@
       <form id="project-form" class="project-form">
         <input type="text" id="proj-name" placeholder="Project name (e.g. History essay)" maxlength="40" required>
         <div class="proj-nums">
+          <select id="proj-type" aria-label="Project type">
+            <option value="short">Short-term</option>
+            <option value="long">Long-term</option>
+          </select>
           <label class="time-input"><input type="number" id="proj-hours" min="0.5" max="500" step="0.5" required aria-label="Hours needed"> h needed</label>
-          <label class="time-input"><input type="number" id="proj-days" min="1" max="365" step="1" required aria-label="Days until due"> days to finish</label>
+          <label class="time-input" id="proj-days-wrap"><input type="number" id="proj-days" min="1" max="365" step="1" required aria-label="Days until due"> days to finish</label>
           <button type="submit" class="btn btn-primary">Add project</button>
         </div>
       </form>

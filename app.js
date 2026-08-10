@@ -158,6 +158,7 @@
   }
 
   function projectDaysLeft(p) {
+    if (!p.deadline) return Infinity; // long-term: no clock ticking
     return (p.deadline - Date.now()) / 86400000;
   }
 
@@ -187,6 +188,7 @@
   }
 
   function dueText(p) {
+    if (!p.deadline) return 'long-term';
     const d = projectDaysLeft(p);
     if (d <= 0) return 'overdue';
     if (d < 1) return `${Math.max(1, Math.round(d * 24))}h left`;
@@ -765,6 +767,7 @@
   const projName = $('proj-name');
   const projHours = $('proj-hours');
   const projDays = $('proj-days');
+  const projType = $('proj-type');
   const logForm = $('log-form');
   const logActivity = $('log-activity');
   const logMinutes = $('log-minutes');
@@ -1164,7 +1167,7 @@
     }
 
     active
-      .sort((a, b) => a.deadline - b.deadline)
+      .sort((a, b) => (a.deadline || Infinity) - (b.deadline || Infinity))
       .forEach(proj => {
         const logged = projectLogged(proj);
         const rem = projectRemaining(proj);
@@ -1198,6 +1201,8 @@
         } else if (overdue) {
           status.textContent = `overdue · ${fmtDuration(rem)} still needed`;
           status.classList.add('overdue');
+        } else if (!proj.deadline) {
+          status.textContent = `long-term · ${fmtDuration(rem)} to go`;
         } else {
           status.textContent = `${dueText(proj)} · needs ~${fmtDuration(projectPace(proj))}/day`;
         }
@@ -1776,7 +1781,9 @@
 
     const reason = document.createElement('p');
     reason.className = 'rec-reason';
-    reason.textContent = `You're on pace for today — get ahead while you can: ${fmtDuration(rem)} to go, ${dueText(p)}.`;
+    reason.textContent = p.deadline
+      ? `You're on pace for today — get ahead while you can: ${fmtDuration(rem)} to go, ${dueText(p)}.`
+      : `No deadline on this one — chip away when you have spare time: ${fmtDuration(rem)} to go.`;
 
     const duration = document.createElement('p');
     duration.className = 'rec-duration';
@@ -1922,16 +1929,28 @@
   // ---------- Focus rating ----------
 
   let focusPendingIds = null;
+  let focusHideTimer = null;
 
   function askFocus(sessionIds) {
     focusPendingIds = sessionIds;
+    clearTimeout(focusHideTimer);
+    focusOverlay.classList.remove('overlay-out');
     focusOverlay.hidden = false;
+  }
+
+  function hideFocusOverlay() {
+    focusOverlay.classList.add('overlay-out');
+    clearTimeout(focusHideTimer);
+    focusHideTimer = setTimeout(() => {
+      focusOverlay.hidden = true;
+      focusOverlay.classList.remove('overlay-out');
+    }, 180);
   }
 
   function resolveFocus(level) {
     const ids = focusPendingIds;
     focusPendingIds = null;
-    focusOverlay.hidden = true;
+    hideFocusOverlay();
     if (!level || !ids) return;
     ids.forEach(id => {
       const s = state.sessions.find(x => x.id === id);
@@ -2069,10 +2088,16 @@
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
 
+      let closed = false;
       const close = result => {
+        if (closed) return;
+        closed = true;
         document.removeEventListener('keydown', onKey);
-        overlay.remove();
-        resolve(result);
+        overlay.classList.add('overlay-out');
+        setTimeout(() => {
+          overlay.remove();
+          resolve(result);
+        }, 180);
       };
       const cancel = () => close(input ? null : false);
       const ok = () => close(input ? field.value : true);
@@ -2190,7 +2215,7 @@
       document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       mode = btn.dataset.mode;
-      fixedControls.hidden = mode !== 'fixed';
+      $('fixed-wrap').classList.toggle('open', mode === 'fixed');
       if (!recBox.classList.contains('hidden')) renderRecommendation();
     });
   });
@@ -2210,17 +2235,24 @@
     newName.focus();
   });
 
+  projType.addEventListener('change', () => {
+    const long = projType.value === 'long';
+    $('proj-days-wrap').hidden = long;
+    projDays.required = !long;
+  });
+
   projectForm.addEventListener('submit', e => {
     e.preventDefault();
     const name = projName.value.trim();
     const hours = parseFloat(projHours.value);
+    const long = projType.value === 'long';
     const days = parseInt(projDays.value, 10);
-    if (!name || !(hours > 0) || !(days >= 1)) return;
+    if (!name || !(hours > 0) || (!long && !(days >= 1))) return;
     state.projects.push({
       id: uid(),
       name,
       neededMinutes: Math.round(hours * 60),
-      deadline: Date.now() + days * 86400000,
+      deadline: long ? null : Date.now() + days * 86400000,
       createdAt: Date.now(),
     });
     save();
@@ -2228,7 +2260,9 @@
     projName.value = '';
     projHours.value = '';
     projDays.value = '';
-    showToast(`Project added — about ${fmtDuration(Math.round(hours * 60 / days))}/day to finish in time.`);
+    showToast(long
+      ? `Long-term project added — ${fmtDuration(Math.round(hours * 60))} whenever you have time.`
+      : `Project added — about ${fmtDuration(Math.round(hours * 60 / days))}/day to finish in time.`);
   });
 
   logForm.addEventListener('submit', e => {

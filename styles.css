@@ -1266,3 +1266,68 @@ select, input[type="text"], input[type="number"] {
   }
   html { scroll-behavior: auto; }
 }
+
+/* ============================================================
+   Smoothness layer: state changes ease instead of snapping
+   ============================================================ */
+
+/* The set-time controls unfold and push content down smoothly */
+.reveal-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    margin-top 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  margin-top: -16px;
+  width: 100%;
+  justify-items: center;
+}
+
+.reveal-wrap > .fixed-controls {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.reveal-wrap.open { grid-template-rows: 1fr; margin-top: 0; }
+
+.reveal-wrap.open > .fixed-controls {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.08s;
+}
+
+/* Timer readout and cancel ease in when the timer starts */
+.timer-display:not([hidden]) {
+  animation: reveal-fade 0.25s ease, timer-pulse 1.6s ease-in-out infinite;
+}
+
+#timer-cancel:not([hidden]) { animation: reveal-fade 0.25s ease; }
+
+@keyframes reveal-fade {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+/* Small toggle buttons ease their state changes */
+.mode-btn, .range-btn {
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* History day contents ease open */
+details.history-day[open] .history-list { animation: reveal-fade 0.3s ease; }
+summary { user-select: none; }
+
+/* Dialogs fade out instead of vanishing */
+.modal-overlay, .focus-overlay { transition: opacity 0.18s ease; }
+.overlay-out { opacity: 0 !important; pointer-events: none; }
+
+.modal-dialog, .focus-dialog { transition: opacity 0.18s ease, transform 0.18s ease; }
+
+.overlay-out .modal-dialog,
+.overlay-out .focus-dialog {
+  opacity: 0;
+  transform: translateY(8px) scale(0.97);
+}
+
+.time-input[hidden] { display: none; }
