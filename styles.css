@@ -1331,3 +1331,27 @@ summary { user-select: none; }
 }
 
 .time-input[hidden] { display: none; }
+
+/* ---------- Skip insights ---------- */
+.skip-facts {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.skip-facts li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.skip-facts li::before {
+  content: '▸';
+  color: var(--accent);
+  flex: 0 0 auto;
+}

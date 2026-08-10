@@ -14,6 +14,7 @@
   let range = 'week'; // 'week' | '7d' | 'all'
   let mode = 'unknown'; // 'unknown' | 'fixed'
   let timerInterval = null;
+  const skippedThisAsk = new Set(); // suggestions skipped since the last fresh ask
 
   function load() {
     try {
@@ -25,6 +26,7 @@
           if (typeof parsed.unlocked !== 'object' || !parsed.unlocked) parsed.unlocked = {};
           if (typeof parsed.settings !== 'object' || !parsed.settings) parsed.settings = {};
           if (!Array.isArray(parsed.projects)) parsed.projects = [];
+          if (!Array.isArray(parsed.skips)) parsed.skips = [];
           parsed.projects.forEach(p => {
             if (p.deadline === null && p.longTerm === undefined) p.longTerm = true;
             if (p.longTerm && !p.intensity) p.intensity = 2;
@@ -33,7 +35,7 @@
         }
       }
     } catch (e) { /* corrupted storage falls through to fresh state */ }
-    return { activities: [], sessions: [], unlocked: {}, settings: {}, projects: [] };
+    return { activities: [], sessions: [], unlocked: {}, settings: {}, projects: [], skips: [] };
   }
 
   function save() {
@@ -205,8 +207,8 @@
 
   // Highest-priority project behind today's pace (deadlines outrank
   // long-term habits), or the top active project for work-ahead ideas.
-  function urgentProject() {
-    const entries = activeProjects().map(p => ({
+  function urgentProject(exclude = new Set()) {
+    const entries = activeProjects().filter(p => !exclude.has(p.id)).map(p => ({
       p,
       pace: projectPace(p),
       rem: projectRemaining(p),
@@ -264,8 +266,9 @@
 
   // Pick the activity furthest behind its target share, measured in minutes:
   // deficit = target share × total tracked time − time spent on it.
-  function recommend() {
-    const { stats, totalMins } = computeStats();
+  function recommend(exclude = new Set()) {
+    const { stats: allStats, totalMins } = computeStats();
+    const stats = allStats.filter(s => !exclude.has(s.activity.id));
     if (stats.length === 0) return null;
 
     if (totalMins === 0) {
@@ -817,6 +820,8 @@
   const historySummary = $('history-summary');
   const archiveList = $('archive-list');
   const archiveEmpty = $('archive-empty');
+  const skipSummary = $('skip-summary');
+  const skipFacts = $('skip-facts');
   const achGrid = $('ach-grid');
   const achSummary = $('ach-summary');
   const focusBest = $('focus-best');
@@ -837,8 +842,65 @@
     renderHistory();
     renderArchive();
     renderInsights();
+    renderSkipInsights();
     checkAchievements(false);
     renderAchievements();
+  }
+
+  function itemName(id) {
+    const x = state.activities.find(a => a.id === id) || state.projects.find(p => p.id === id);
+    return x ? x.name : '(deleted)';
+  }
+
+  function renderSkipInsights() {
+    skipFacts.innerHTML = '';
+    const skips = state.skips;
+    if (!skips.length) {
+      skipSummary.textContent = "No skips yet — when a suggestion doesn't fit, hit Skip and your patterns will show up here.";
+      return;
+    }
+
+    const weekStart = startOfWeek(new Date()).getTime();
+    const thisWeek = skips.filter(s => s.timestamp >= weekStart).length;
+    skipSummary.textContent = `${skips.length} skip${skips.length === 1 ? '' : 's'} total · ${thisWeek} this week`;
+
+    const facts = [];
+
+    const counts = {};
+    skips.forEach(s => { counts[s.id] = (counts[s.id] || 0) + 1; });
+    const topIds = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    facts.push(`Most skipped: ${itemName(topIds[0])} (${counts[topIds[0]]} time${counts[topIds[0]] === 1 ? '' : 's'})`);
+    if (topIds.length > 1) {
+      facts.push(`Runner-up: ${itemName(topIds[1])} (${counts[topIds[1]]})`);
+    }
+
+    const bandCounts = {};
+    skips.forEach(s => {
+      const k = bandOf(new Date(s.timestamp).getHours()).key;
+      bandCounts[k] = (bandCounts[k] || 0) + 1;
+    });
+    const topBand = Object.keys(bandCounts).sort((a, b) => bandCounts[b] - bandCounts[a])[0];
+    facts.push(`You skip most ${HOUR_BANDS.find(b => b.key === topBand).label} (${bandCounts[topBand]} of ${skips.length})`);
+
+    const wd = {};
+    skips.forEach(s => {
+      const k = new Date(s.timestamp).getDay();
+      wd[k] = (wd[k] || 0) + 1;
+    });
+    const topWd = Object.keys(wd).sort((a, b) => wd[b] - wd[a])[0];
+    const wdNames = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
+    facts.push(`${wdNames[topWd]} are your biggest skip day (${wd[topWd]})`);
+
+    const rated = skips.length >= 5
+      ? `On average you skip ${(skips.length / Math.max(1, new Set(skips.map(s => { const d = new Date(s.timestamp); d.setHours(0, 0, 0, 0); return d.getTime(); })).size)).toFixed(1)} times per day you use the site`
+      : null;
+    if (rated) facts.push(rated);
+
+    facts.forEach(f => {
+      const li = document.createElement('li');
+      li.textContent = f;
+      skipFacts.appendChild(li);
+    });
   }
 
   function renderArchive() {
@@ -1592,22 +1654,26 @@
       return;
     }
 
-    const up = urgentProject();
+    const up = urgentProject(splitToggle.checked ? undefined : skippedThisAsk);
 
     if (!splitToggle.checked) {
       if (projectClaims(up)) {
         renderProjectRecommendation(up, Math.min(X, up.rem));
         return;
       }
-      if (state.activities.length === 0) {
+      const rec = recommend(skippedThisAsk);
+      if (!rec) {
         if (up) {
           renderProjectAhead(up, Math.min(X, up.rem));
+          return;
+        }
+        if (skippedThisAsk.size) {
+          renderAllSkipped();
           return;
         }
         recBox.innerHTML = `<p class="rec-reason">Add some activities or a project first, then ask again!</p>`;
         return;
       }
-      const rec = recommend();
       const act = rec.activity;
       const { totalMins } = computeStats();
 
@@ -1634,7 +1700,8 @@
       actions.className = 'rec-actions';
       actions.append(
         makeStartTimerButton(act),
-        makeLogButton([{ activity: act, minutes: X }], `Log ${fmtDuration(X)} now`)
+        makeLogButton([{ activity: act, minutes: X }], `Log ${fmtDuration(X)} now`),
+        makeSkipButton(act)
       );
 
       recBox.append(headline, reason, actions);
@@ -1764,6 +1831,21 @@
     recBox.appendChild(actions);
   }
 
+  function makeSkipButton(item) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-ghost';
+    btn.textContent = 'Skip';
+    btn.title = 'Not this one — suggest something else';
+    btn.addEventListener('click', () => {
+      state.skips.push({ id: item.id, timestamp: Date.now() });
+      skippedThisAsk.add(item.id);
+      save();
+      renderSkipInsights();
+      renderRecommendation();
+    });
+    return btn;
+  }
+
   function makeStartTimerButton(act, label) {
     const btn = document.createElement('button');
     btn.className = 'btn btn-primary';
@@ -1821,7 +1903,8 @@
     actions.className = 'rec-actions';
     actions.append(
       makeStartTimerButton(p),
-      makeLogButton([{ activity: p, minutes }], `Log ${fmtDuration(minutes)} now`)
+      makeLogButton([{ activity: p, minutes }], `Log ${fmtDuration(minutes)} now`),
+      makeSkipButton(p)
     );
 
     recBox.append(headline, reason, duration, actions);
@@ -1853,29 +1936,40 @@
     actions.className = 'rec-actions';
     actions.append(
       makeStartTimerButton(p),
-      makeLogButton([{ activity: p, minutes }], `Log ${fmtDuration(minutes)} now`)
+      makeLogButton([{ activity: p, minutes }], `Log ${fmtDuration(minutes)} now`),
+      makeSkipButton(p)
     );
 
     recBox.append(headline, reason, duration, actions);
   }
 
+  // Everything got skipped this round: say so and start fresh next ask.
+  function renderAllSkipped() {
+    recBox.innerHTML = `<p class="rec-reason">You've skipped everything on the list — pick whatever sounds good, or ask again to start over.</p>`;
+    skippedThisAsk.clear();
+  }
+
   function renderOpenRecommendation() {
-    const up = urgentProject();
+    const up = urgentProject(skippedThisAsk);
     if (projectClaims(up)) {
       const sug = Math.min(up.rem, Math.max(15, Math.min(180, Math.round(up.pace - todayLoggedFor(up.p.id)))));
       renderProjectRecommendation(up, sug);
       return;
     }
-    if (state.activities.length === 0) {
+
+    const rec = recommend(skippedThisAsk);
+    if (!rec) {
       if (up) {
         renderProjectAhead(up, Math.min(up.rem, 60));
+        return;
+      }
+      if (skippedThisAsk.size) {
+        renderAllSkipped();
         return;
       }
       recBox.innerHTML = `<p class="rec-reason">Add some activities or a project first, then ask again!</p>`;
       return;
     }
-
-    const rec = recommend();
     const { totalMins } = computeStats();
     const act = rec.activity;
 
@@ -1925,7 +2019,7 @@
       askFocus([session.id]);
     });
 
-    actions.append(startBtn, logBtn);
+    actions.append(startBtn, logBtn, makeSkipButton(act));
     recBox.append(headline, reason, duration, actions);
   }
 
@@ -2255,7 +2349,10 @@
 
   // ---------- Events ----------
 
-  askBtn.addEventListener('click', renderRecommendation);
+  askBtn.addEventListener('click', () => {
+    skippedThisAsk.clear(); // a fresh ask reconsiders everything
+    renderRecommendation();
+  });
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => { location.hash = btn.dataset.page; });
