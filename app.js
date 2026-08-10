@@ -1498,6 +1498,9 @@
   function renderRecommendation() {
     recBox.classList.remove('hidden');
     recBox.innerHTML = '';
+    recBox.classList.remove('rec-anim');
+    void recBox.offsetWidth; // restart the entrance animation
+    recBox.classList.add('rec-anim');
 
     if (state.activities.length === 0 && state.projects.length === 0) {
       recBox.innerHTML = `<p class="rec-reason">Add some activities or a project first, then ask again!</p>`;
