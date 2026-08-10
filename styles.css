@@ -1332,6 +1332,24 @@ summary { user-select: none; }
 
 .time-input[hidden] { display: none; }
 
+/* Skip: a quiet text link under the suggestion */
+.skip-link {
+  font: inherit;
+  font-size: 0.8rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  display: inline-block;
+  transition: color 0.15s ease;
+}
+
+.skip-link:hover { color: var(--text-secondary); }
+
 /* ---------- Skip insights ---------- */
 .skip-facts {
   list-style: none;

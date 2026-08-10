@@ -1700,11 +1700,10 @@
       actions.className = 'rec-actions';
       actions.append(
         makeStartTimerButton(act),
-        makeLogButton([{ activity: act, minutes: X }], `Log ${fmtDuration(X)} now`),
-        makeSkipButton(act)
+        makeLogButton([{ activity: act, minutes: X }], `Log ${fmtDuration(X)} now`)
       );
 
-      recBox.append(headline, reason, actions);
+      recBox.append(headline, reason, actions, makeSkipButton(act));
       return;
     }
 
@@ -1833,9 +1832,9 @@
 
   function makeSkipButton(item) {
     const btn = document.createElement('button');
-    btn.className = 'btn btn-ghost';
-    btn.textContent = 'Skip';
-    btn.title = 'Not this one — suggest something else';
+    btn.type = 'button';
+    btn.className = 'skip-link';
+    btn.textContent = 'skip — suggest something else';
     btn.addEventListener('click', () => {
       state.skips.push({ id: item.id, timestamp: Date.now() });
       skippedThisAsk.add(item.id);
@@ -1903,11 +1902,10 @@
     actions.className = 'rec-actions';
     actions.append(
       makeStartTimerButton(p),
-      makeLogButton([{ activity: p, minutes }], `Log ${fmtDuration(minutes)} now`),
-      makeSkipButton(p)
+      makeLogButton([{ activity: p, minutes }], `Log ${fmtDuration(minutes)} now`)
     );
 
-    recBox.append(headline, reason, duration, actions);
+    recBox.append(headline, reason, duration, actions, makeSkipButton(p));
   }
 
   // A project that has met today's pace is still a normal suggestion —
@@ -1936,11 +1934,10 @@
     actions.className = 'rec-actions';
     actions.append(
       makeStartTimerButton(p),
-      makeLogButton([{ activity: p, minutes }], `Log ${fmtDuration(minutes)} now`),
-      makeSkipButton(p)
+      makeLogButton([{ activity: p, minutes }], `Log ${fmtDuration(minutes)} now`)
     );
 
-    recBox.append(headline, reason, duration, actions);
+    recBox.append(headline, reason, duration, actions, makeSkipButton(p));
   }
 
   // Everything got skipped this round: say so and start fresh next ask.
@@ -2019,8 +2016,8 @@
       askFocus([session.id]);
     });
 
-    actions.append(startBtn, logBtn, makeSkipButton(act));
-    recBox.append(headline, reason, duration, actions);
+    actions.append(startBtn, logBtn);
+    recBox.append(headline, reason, duration, actions, makeSkipButton(act));
   }
 
   // ---------- Activity CRUD ----------
