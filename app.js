@@ -25,6 +25,10 @@
           if (typeof parsed.unlocked !== 'object' || !parsed.unlocked) parsed.unlocked = {};
           if (typeof parsed.settings !== 'object' || !parsed.settings) parsed.settings = {};
           if (!Array.isArray(parsed.projects)) parsed.projects = [];
+          parsed.projects.forEach(p => {
+            if (p.deadline === null && p.longTerm === undefined) p.longTerm = true;
+            if (p.longTerm && !p.intensity) p.intensity = 2;
+          });
           return parsed;
         }
       }
@@ -149,21 +153,42 @@
 
   // ---------- Projects (short-term, deadline-driven) ----------
 
+  // Long-term projects run on intensity (a daily habit) instead of hours.
+  const INTENSITY = {
+    1: { label: 'Very low', mins: 15 },
+    2: { label: 'Low', mins: 30 },
+    3: { label: 'Medium', mins: 60 },
+    4: { label: 'High', mins: 120 },
+  };
+
   function projectLogged(p) {
     return state.sessions.filter(s => s.activityId === p.id).reduce((a, s) => a + s.minutes, 0);
   }
 
   function projectRemaining(p) {
+    if (!p.neededMinutes) return Infinity; // open-ended long-term
     return Math.max(0, p.neededMinutes - projectLogged(p));
   }
 
   function projectDaysLeft(p) {
-    if (!p.deadline) return Infinity; // long-term: no clock ticking
+    if (!p.deadline) return Infinity;
     return (p.deadline - Date.now()) / 86400000;
   }
 
-  // Minutes per day required to finish on time; overdue means all of it now.
+  // A project leaves the dashboard when marked finished, its hours are
+  // done, or (for long-term) its optional end date has passed.
+  function projectArchived(p) {
+    if (p.completed) return true;
+    if (!p.longTerm) return projectRemaining(p) <= 0;
+    return !!(p.deadline && Date.now() > p.deadline);
+  }
+
+  const activeProjects = () => state.projects.filter(p => !projectArchived(p));
+
+  // Daily minutes this project wants: required pace for deadlines,
+  // chosen intensity for long-term habits.
   function projectPace(p) {
+    if (p.longTerm) return (INTENSITY[p.intensity] || INTENSITY[2]).mins;
     const rem = projectRemaining(p);
     const d = projectDaysLeft(p);
     if (d <= 0) return rem;
@@ -178,13 +203,22 @@
       .reduce((a, s) => a + s.minutes, 0);
   }
 
-  // The unfinished project with the steepest required pace, or null.
+  // Highest-priority project behind today's pace (deadlines outrank
+  // long-term habits), or the top active project for work-ahead ideas.
   function urgentProject() {
-    const active = state.projects
-      .filter(p => projectRemaining(p) > 0)
-      .map(p => ({ p, pace: projectPace(p), rem: projectRemaining(p), overdue: projectDaysLeft(p) <= 0 }));
-    if (!active.length) return null;
-    return active.sort((a, b) => b.pace - a.pace)[0];
+    const entries = activeProjects().map(p => ({
+      p,
+      pace: projectPace(p),
+      rem: projectRemaining(p),
+      overdue: !p.longTerm && projectDaysLeft(p) <= 0,
+    }));
+    if (!entries.length) return null;
+    const rank = e => (e.p.longTerm ? 0 : 1e6) + e.pace;
+    const behind = entries
+      .filter(e => todayLoggedFor(e.p.id) < e.pace)
+      .sort((a, b) => rank(b) - rank(a));
+    if (behind.length) return behind[0];
+    return entries.sort((a, b) => rank(b) - rank(a))[0];
   }
 
   function dueText(p) {
@@ -809,15 +843,17 @@
 
   function renderArchive() {
     archiveList.innerHTML = '';
-    const done = state.projects.filter(p => projectRemaining(p) <= 0);
+    const done = state.projects.filter(projectArchived);
     archiveEmpty.style.display = done.length ? 'none' : '';
 
     done
       .map(p => ({
         p,
-        finishedAt: state.sessions
-          .filter(s => s.activityId === p.id)
-          .reduce((a, s) => Math.max(a, s.timestamp), p.createdAt),
+        finishedAt: p.completed
+          || (p.longTerm && p.deadline)
+          || state.sessions
+            .filter(s => s.activityId === p.id)
+            .reduce((a, s) => Math.max(a, s.timestamp), p.createdAt),
       }))
       .sort((a, b) => b.finishedAt - a.finishedAt)
       .forEach(({ p, finishedAt }) => {
@@ -1155,7 +1191,7 @@
 
   function renderProjects() {
     projectList.innerHTML = '';
-    const active = state.projects.filter(p => projectRemaining(p) > 0);
+    const active = activeProjects();
     if (active.length === 0) {
       const p = document.createElement('p');
       p.className = 'hint';
@@ -1171,8 +1207,9 @@
       .forEach(proj => {
         const logged = projectLogged(proj);
         const rem = projectRemaining(proj);
-        const done = false;
-        const overdue = projectDaysLeft(proj) <= 0;
+        const pace = projectPace(proj);
+        const today = todayLoggedFor(proj.id);
+        const overdue = !proj.longTerm && projectDaysLeft(proj) <= 0;
 
         const row = document.createElement('div');
         row.className = 'project-row';
@@ -1195,16 +1232,30 @@
 
         const status = document.createElement('span');
         status.className = 'project-status';
-        if (done) {
-          status.textContent = '✓ done';
-          status.classList.add('done');
-        } else if (overdue) {
+        if (overdue) {
           status.textContent = `overdue · ${fmtDuration(rem)} still needed`;
           status.classList.add('overdue');
-        } else if (!proj.deadline) {
-          status.textContent = `long-term · ${fmtDuration(rem)} to go`;
+        } else if (proj.longTerm) {
+          const level = INTENSITY[proj.intensity] || INTENSITY[2];
+          status.textContent = `${level.label} · ~${fmtDuration(level.mins)}/day`
+            + (proj.deadline ? ` · ${dueText(proj)}` : '');
         } else {
-          status.textContent = `${dueText(proj)} · needs ~${fmtDuration(projectPace(proj))}/day`;
+          status.textContent = `${dueText(proj)} · needs ~${fmtDuration(pace)}/day`;
+        }
+
+        const actions = [];
+        if (proj.longTerm) {
+          const finish = document.createElement('button');
+          finish.className = 'icon-btn';
+          finish.title = `Mark ${proj.name} finished`;
+          finish.textContent = '✓';
+          finish.addEventListener('click', async () => {
+            if (!(await themedConfirm(`Mark "${proj.name}" as finished? It moves to the archive on the History tab.`, { title: 'Finish project', confirmLabel: 'Finish' }))) return;
+            proj.completed = Date.now();
+            save();
+            render();
+          });
+          actions.push(finish);
         }
 
         const del = document.createElement('button');
@@ -1222,20 +1273,29 @@
           save();
           render();
         });
+        actions.push(del);
 
-        head.append(name, status, del);
+        head.append(name, status, ...actions);
 
+        // Long-term bars track today's habit; deadline bars track completion.
         const track = document.createElement('div');
         track.className = 'project-track';
         const fill = document.createElement('div');
-        fill.className = 'project-fill' + (done ? ' done' : '');
-        fill.style.width = `${Math.min(100, (logged / proj.neededMinutes) * 100)}%`;
+        const pct = proj.longTerm
+          ? Math.min(100, (today / pace) * 100)
+          : Math.min(100, (logged / proj.neededMinutes) * 100);
+        fill.className = 'project-fill' + (proj.longTerm && today >= pace ? ' done' : '');
+        fill.style.width = `${pct}%`;
         track.appendChild(fill);
-        attachTooltip(track, () => `${fmtDuration(logged)} of ${fmtDuration(proj.neededMinutes)} logged`);
+        attachTooltip(track, () => proj.longTerm
+          ? `${fmtDuration(today)} of ~${fmtDuration(pace)} today`
+          : `${fmtDuration(logged)} of ${fmtDuration(proj.neededMinutes)} logged`);
 
         const meta = document.createElement('div');
         meta.className = 'project-meta';
-        meta.textContent = `${fmtDuration(logged)} of ${fmtDuration(proj.neededMinutes)}`;
+        meta.textContent = proj.longTerm
+          ? `${fmtDuration(today)} of ~${fmtDuration(pace)} today · ${fmtDuration(logged)} total`
+          : `${fmtDuration(logged)} of ${fmtDuration(proj.neededMinutes)}`;
 
         row.append(head, track, meta);
         projectList.appendChild(row);
@@ -1585,10 +1645,9 @@
     // rest of the block waterfills across regular activities.
     let left = X;
     const projectBlocks = [];
-    state.projects
-      .filter(p => projectRemaining(p) > 0)
+    activeProjects()
       .map(p => ({ p, pace: projectPace(p) }))
-      .sort((a, b) => b.pace - a.pace)
+      .sort((a, b) => ((b.p.longTerm ? 0 : 1e6) + b.pace) - ((a.p.longTerm ? 0 : 1e6) + a.pace))
       .forEach(({ p, pace }) => {
         if (left <= 0) return;
         const need = Math.min(
@@ -1605,8 +1664,7 @@
     // With no regular activities to fall back to, leftover time works
     // ahead on the projects themselves.
     if (left > 0 && state.activities.length === 0) {
-      state.projects
-        .filter(p => projectRemaining(p) > 0)
+      activeProjects()
         .map(p => ({ p, pace: projectPace(p) }))
         .sort((a, b) => b.pace - a.pace)
         .forEach(({ p }) => {
@@ -1751,7 +1809,9 @@
     reason.className = 'rec-reason';
     reason.textContent = overdue
       ? `This project is overdue — ${fmtDuration(rem)} still needed. Clear it before anything else.`
-      : `Deadline first: it needs about ${fmtDuration(pace)} per day to finish on time (${fmtDuration(rem)} to go, ${dueText(p)}).`;
+      : p.longTerm
+        ? `Keep the habit going — you're aiming for about ${fmtDuration(pace)} a day on this${p.deadline ? ` (${dueText(p)})` : ''}.`
+        : `Deadline first: it needs about ${fmtDuration(pace)} per day to finish on time (${fmtDuration(rem)} to go, ${dueText(p)}).`;
 
     const duration = document.createElement('p');
     duration.className = 'rec-duration';
@@ -1781,9 +1841,9 @@
 
     const reason = document.createElement('p');
     reason.className = 'rec-reason';
-    reason.textContent = p.deadline
-      ? `You're on pace for today — get ahead while you can: ${fmtDuration(rem)} to go, ${dueText(p)}.`
-      : `No deadline on this one — chip away when you have spare time: ${fmtDuration(rem)} to go.`;
+    reason.textContent = p.longTerm
+      ? `You've hit today's target on this — extra time still counts toward the habit.`
+      : `You're on pace for today — get ahead while you can: ${fmtDuration(rem)} to go, ${dueText(p)}.`;
 
     const duration = document.createElement('p');
     duration.className = 'rec-duration';
@@ -2237,32 +2297,57 @@
 
   projType.addEventListener('change', () => {
     const long = projType.value === 'long';
+    $('proj-hours-wrap').hidden = long;
     $('proj-days-wrap').hidden = long;
+    $('proj-intensity').hidden = !long;
+    $('proj-due-wrap').hidden = !long;
+    projHours.required = !long;
     projDays.required = !long;
   });
 
   projectForm.addEventListener('submit', e => {
     e.preventDefault();
     const name = projName.value.trim();
-    const hours = parseFloat(projHours.value);
     const long = projType.value === 'long';
-    const days = parseInt(projDays.value, 10);
-    if (!name || !(hours > 0) || (!long && !(days >= 1))) return;
-    state.projects.push({
-      id: uid(),
-      name,
-      neededMinutes: Math.round(hours * 60),
-      deadline: long ? null : Date.now() + days * 86400000,
-      createdAt: Date.now(),
-    });
+    if (!name) return;
+
+    if (long) {
+      const intensity = parseInt($('proj-intensity').value, 10) || 2;
+      const due = $('proj-due').value;
+      const deadline = due ? new Date(`${due}T23:59:59`).getTime() : null;
+      if (deadline && deadline < Date.now()) {
+        showToast('That due date is already in the past.');
+        return;
+      }
+      state.projects.push({
+        id: uid(),
+        name,
+        longTerm: true,
+        intensity,
+        deadline,
+        createdAt: Date.now(),
+      });
+      showToast(`Long-term project added — aim for ~${fmtDuration(INTENSITY[intensity].mins)}/day.`);
+      $('proj-due').value = '';
+    } else {
+      const hours = parseFloat(projHours.value);
+      const days = parseInt(projDays.value, 10);
+      if (!(hours > 0) || !(days >= 1)) return;
+      state.projects.push({
+        id: uid(),
+        name,
+        neededMinutes: Math.round(hours * 60),
+        deadline: Date.now() + days * 86400000,
+        createdAt: Date.now(),
+      });
+      showToast(`Project added — about ${fmtDuration(Math.round(hours * 60 / days))}/day to finish in time.`);
+      projHours.value = '';
+      projDays.value = '';
+    }
+
     save();
     render();
     projName.value = '';
-    projHours.value = '';
-    projDays.value = '';
-    showToast(long
-      ? `Long-term project added — ${fmtDuration(Math.round(hours * 60))} whenever you have time.`
-      : `Project added — about ${fmtDuration(Math.round(hours * 60 / days))}/day to finish in time.`);
   });
 
   logForm.addEventListener('submit', e => {

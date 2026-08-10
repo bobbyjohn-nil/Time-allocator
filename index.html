@@ -99,8 +99,15 @@
             <option value="short">Short-term</option>
             <option value="long">Long-term</option>
           </select>
-          <label class="time-input"><input type="number" id="proj-hours" min="0.5" max="500" step="0.5" required aria-label="Hours needed"> h needed</label>
+          <label class="time-input" id="proj-hours-wrap"><input type="number" id="proj-hours" min="0.5" max="500" step="0.5" required aria-label="Hours needed"> h needed</label>
           <label class="time-input" id="proj-days-wrap"><input type="number" id="proj-days" min="1" max="365" step="1" required aria-label="Days until due"> days to finish</label>
+          <select id="proj-intensity" aria-label="Intensity of work" hidden>
+            <option value="1">Very low (~15m/day)</option>
+            <option value="2" selected>Low (~30m/day)</option>
+            <option value="3">Medium (~1h/day)</option>
+            <option value="4">High (~2h/day)</option>
+          </select>
+          <label class="time-input" id="proj-due-wrap" hidden><input type="date" id="proj-due" aria-label="Due date (optional)"> due (optional)</label>
           <button type="submit" class="btn btn-primary">Add project</button>
         </div>
       </form>
