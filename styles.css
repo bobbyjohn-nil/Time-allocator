@@ -457,6 +457,53 @@ select, input[type="text"], input[type="number"] {
 .activity-form { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .activity-form input[type="text"] { flex: 1; min-width: 160px; }
 
+/* ---------- Projects ---------- */
+.project-list { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+
+.project-row { display: flex; flex-direction: column; gap: 4px; }
+
+.project-head { display: flex; align-items: center; gap: 8px; }
+
+.project-name {
+  font: inherit;
+  font-weight: 500;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-primary);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-name:hover { text-decoration: underline; }
+
+.project-status { margin-left: auto; font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; }
+.project-status.done { color: var(--good); }
+.project-status.overdue { color: var(--danger); }
+
+.project-track {
+  height: 10px;
+  background: var(--track);
+  border-radius: 4px;
+}
+
+.project-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px 0 0 4px;
+  min-width: 2px;
+}
+
+.project-fill.done { background: var(--good); border-radius: 4px; }
+
+.project-meta { font-size: 0.8rem; color: var(--text-muted); }
+
+.project-form { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.proj-nums { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; color: var(--text-secondary); }
+.proj-nums input { width: 70px; }
+
 /* ---------- Log form ---------- */
 .log-form { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
 .quick-chips { display: flex; gap: 8px; flex-wrap: wrap; }

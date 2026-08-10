@@ -24,11 +24,12 @@
           normalizeTargets(parsed.activities);
           if (typeof parsed.unlocked !== 'object' || !parsed.unlocked) parsed.unlocked = {};
           if (typeof parsed.settings !== 'object' || !parsed.settings) parsed.settings = {};
+          if (!Array.isArray(parsed.projects)) parsed.projects = [];
           return parsed;
         }
       }
     } catch (e) { /* corrupted storage falls through to fresh state */ }
-    return { activities: [], sessions: [], unlocked: {}, settings: {} };
+    return { activities: [], sessions: [], unlocked: {}, settings: {}, projects: [] };
   }
 
   function save() {
@@ -146,12 +147,67 @@
     return idx < SERIES_SLOTS ? `var(--series-${idx + 1})` : 'var(--series-other)';
   }
 
+  // ---------- Projects (short-term, deadline-driven) ----------
+
+  function projectLogged(p) {
+    return state.sessions.filter(s => s.activityId === p.id).reduce((a, s) => a + s.minutes, 0);
+  }
+
+  function projectRemaining(p) {
+    return Math.max(0, p.neededMinutes - projectLogged(p));
+  }
+
+  function projectDaysLeft(p) {
+    return (p.deadline - Date.now()) / 86400000;
+  }
+
+  // Minutes per day required to finish on time; overdue means all of it now.
+  function projectPace(p) {
+    const rem = projectRemaining(p);
+    const d = projectDaysLeft(p);
+    if (d <= 0) return rem;
+    return rem / Math.max(d, 0.5);
+  }
+
+  function todayLoggedFor(id) {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    return state.sessions
+      .filter(s => s.activityId === id && s.timestamp >= start.getTime())
+      .reduce((a, s) => a + s.minutes, 0);
+  }
+
+  // The unfinished project with the steepest required pace, or null.
+  function urgentProject() {
+    const active = state.projects
+      .filter(p => projectRemaining(p) > 0)
+      .map(p => ({ p, pace: projectPace(p), rem: projectRemaining(p), overdue: projectDaysLeft(p) <= 0 }));
+    if (!active.length) return null;
+    return active.sort((a, b) => b.pace - a.pace)[0];
+  }
+
+  function dueText(p) {
+    const d = projectDaysLeft(p);
+    if (d <= 0) return 'overdue';
+    if (d < 1) return `${Math.max(1, Math.round(d * 24))}h left`;
+    return `${Math.ceil(d)}d left`;
+  }
+
+  const isProjectId = id => state.projects.some(p => p.id === id);
+
+  // Series colors belong to activities; projects all wear the accent.
+  function colorFor(item) {
+    return state.activities.includes(item) ? colorOf(item) : 'var(--accent)';
+  }
+
   // ---------- Stats & recommendation ----------
 
   // Returns per-activity stats over the current range, with targets normalized
   // so they always behave proportionally even if they don't sum to 100.
   function computeStats() {
-    const sessions = windowSessions();
+    // Project time is tracked separately; activity shares split non-project time.
+    const actIds = new Set(state.activities.map(a => a.id));
+    const sessions = windowSessions().filter(s => actIds.has(s.activityId));
     const totalMins = sessions.reduce((a, s) => a + sessionEffective(s), 0);
     const targetSum = state.activities.reduce((a, x) => a + x.targetPercent, 0);
 
@@ -704,6 +760,11 @@
   const targetTotal = $('target-total');
   const activityForm = $('activity-form');
   const newName = $('new-name');
+  const projectList = $('project-list');
+  const projectForm = $('project-form');
+  const projName = $('proj-name');
+  const projHours = $('proj-hours');
+  const projDays = $('proj-days');
   const logForm = $('log-form');
   const logActivity = $('log-activity');
   const logMinutes = $('log-minutes');
@@ -731,6 +792,7 @@
 
   function render() {
     renderActivities();
+    renderProjects();
     renderSelects();
     renderBalance();
     renderHistory();
@@ -1013,14 +1075,111 @@
     for (const sel of [logActivity, timerActivity]) {
       const prev = sel.value;
       sel.innerHTML = '';
-      state.activities.forEach(act => {
-        const opt = document.createElement('option');
-        opt.value = act.id;
-        opt.textContent = act.name;
-        sel.appendChild(opt);
-      });
+      const addOptions = (items, parent) => {
+        items.forEach(x => {
+          const opt = document.createElement('option');
+          opt.value = x.id;
+          opt.textContent = x.name;
+          parent.appendChild(opt);
+        });
+      };
+      if (state.projects.length === 0) {
+        addOptions(state.activities, sel);
+      } else {
+        for (const [label, items] of [['Activities', state.activities], ['Projects', state.projects]]) {
+          if (!items.length) continue;
+          const grp = document.createElement('optgroup');
+          grp.label = label;
+          addOptions(items, grp);
+          sel.appendChild(grp);
+        }
+      }
       if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
     }
+  }
+
+  function renderProjects() {
+    projectList.innerHTML = '';
+    if (state.projects.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'hint';
+      p.textContent = 'No projects right now.';
+      projectList.appendChild(p);
+      return;
+    }
+
+    [...state.projects]
+      .sort((a, b) => a.deadline - b.deadline)
+      .forEach(proj => {
+        const logged = projectLogged(proj);
+        const rem = projectRemaining(proj);
+        const done = rem <= 0;
+        const overdue = !done && projectDaysLeft(proj) <= 0;
+
+        const row = document.createElement('div');
+        row.className = 'project-row';
+
+        const head = document.createElement('div');
+        head.className = 'project-head';
+
+        const name = document.createElement('button');
+        name.type = 'button';
+        name.className = 'project-name';
+        name.textContent = proj.name;
+        name.title = `${proj.name} — click to rename`;
+        name.addEventListener('click', async () => {
+          const newName = await themedPrompt('Rename project', proj.name);
+          if (newName === null || !newName.trim()) return;
+          proj.name = newName.trim();
+          save();
+          render();
+        });
+
+        const status = document.createElement('span');
+        status.className = 'project-status';
+        if (done) {
+          status.textContent = '✓ done';
+          status.classList.add('done');
+        } else if (overdue) {
+          status.textContent = `overdue · ${fmtDuration(rem)} still needed`;
+          status.classList.add('overdue');
+        } else {
+          status.textContent = `${dueText(proj)} · needs ~${fmtDuration(projectPace(proj))}/day`;
+        }
+
+        const del = document.createElement('button');
+        del.className = 'icon-btn danger';
+        del.title = `Delete ${proj.name}`;
+        del.textContent = '✕';
+        del.addEventListener('click', async () => {
+          const n = state.sessions.filter(s => s.activityId === proj.id).length;
+          const msg = n
+            ? `Delete "${proj.name}" and its ${n} logged session${n === 1 ? '' : 's'}?`
+            : `Delete "${proj.name}"?`;
+          if (!(await themedConfirm(msg, { title: 'Delete project', confirmLabel: 'Delete', danger: true }))) return;
+          state.projects = state.projects.filter(x => x.id !== proj.id);
+          state.sessions = state.sessions.filter(s => s.activityId !== proj.id);
+          save();
+          render();
+        });
+
+        head.append(name, status, del);
+
+        const track = document.createElement('div');
+        track.className = 'project-track';
+        const fill = document.createElement('div');
+        fill.className = 'project-fill' + (done ? ' done' : '');
+        fill.style.width = `${Math.min(100, (logged / proj.neededMinutes) * 100)}%`;
+        track.appendChild(fill);
+        attachTooltip(track, () => `${fmtDuration(logged)} of ${fmtDuration(proj.neededMinutes)} logged`);
+
+        const meta = document.createElement('div');
+        meta.className = 'project-meta';
+        meta.textContent = `${fmtDuration(logged)} of ${fmtDuration(proj.neededMinutes)}`;
+
+        row.append(head, track, meta);
+        projectList.appendChild(row);
+      });
   }
 
   function renderBalance() {
@@ -1116,13 +1275,14 @@
       : '';
 
     recent.forEach(s => {
-      const act = state.activities.find(a => a.id === s.activityId);
+      const act = state.activities.find(a => a.id === s.activityId)
+        || state.projects.find(p => p.id === s.activityId);
       const li = document.createElement('li');
       li.className = 'history-item';
 
       const sw = document.createElement('span');
       sw.className = 'swatch';
-      sw.style.background = act ? colorOf(act) : 'var(--series-other)';
+      sw.style.background = act ? colorFor(act) : 'var(--series-other)';
 
       const name = document.createElement('span');
       name.textContent = act ? act.name : '(deleted activity)';
@@ -1231,8 +1391,8 @@
     recBox.classList.remove('hidden');
     recBox.innerHTML = '';
 
-    if (state.activities.length === 0) {
-      recBox.innerHTML = `<p class="rec-reason">Add some activities first, then ask again!</p>`;
+    if (state.activities.length === 0 && state.projects.length === 0) {
+      recBox.innerHTML = `<p class="rec-reason">Add some activities or a project first, then ask again!</p>`;
       return;
     }
 
@@ -1256,7 +1416,17 @@
       return;
     }
 
+    const up = urgentProject();
+
     if (!splitToggle.checked) {
+      if (projectClaims(up)) {
+        renderProjectRecommendation(up, Math.min(X, up.rem));
+        return;
+      }
+      if (state.activities.length === 0) {
+        recBox.innerHTML = `<p class="rec-reason">Your projects are on pace for today — enjoy the ${fmtDuration(X)}, or add activities to split it.</p>`;
+        return;
+      }
       const rec = recommend();
       const act = rec.activity;
       const { totalMins } = computeStats();
@@ -1291,29 +1461,52 @@
       return;
     }
 
-    const blocks = planAllocation(X);
-    if (!blocks.length) {
-      recBox.innerHTML = `<p class="rec-reason">Couldn't build a plan — check your activities.</p>`;
-      return;
-    }
+    // Deadline projects take what they need for today off the top; the
+    // rest of the block waterfills across regular activities.
+    let left = X;
+    const projectBlocks = [];
+    state.projects
+      .filter(p => projectRemaining(p) > 0)
+      .map(p => ({ p, pace: projectPace(p) }))
+      .sort((a, b) => b.pace - a.pace)
+      .forEach(({ p, pace }) => {
+        if (left <= 0) return;
+        const need = Math.min(
+          Math.ceil(Math.max(pace - todayLoggedFor(p.id), 0)),
+          projectRemaining(p),
+          left
+        );
+        if (need >= 10) {
+          projectBlocks.push({ activity: p, minutes: need });
+          left -= need;
+        }
+      });
 
-    // With enough focus data, order the plan around how you focus at this
-    // hour: hardest first in your best hours, easiest first in your worst.
+    const actBlocks = left > 0 && state.activities.length ? planAllocation(left) : [];
+
+    // With enough focus data, order the activity part around how you focus
+    // at this hour: hardest first in your best hours, easiest in your worst.
     const bands = focusBands();
     let orderNote = '';
-    if (bands && blocks.length > 1 && blocks.some(b => activityFocusAvg(b.activity.id) !== null)) {
+    if (bands && actBlocks.length > 1 && actBlocks.some(b => activityFocusAvg(b.activity.id) !== null)) {
       const nowBand = bandOf(new Date().getHours());
       const avgOf = b => {
         const a = activityFocusAvg(b.activity.id);
         return a === null ? 2.5 : a;
       };
       if (nowBand.key === bands.best.key) {
-        blocks.sort((a, b) => avgOf(a) - avgOf(b));
+        actBlocks.sort((a, b) => avgOf(a) - avgOf(b));
         orderNote = `You're usually most locked in ${nowBand.label}, so the plan starts with what you find hardest to focus on.`;
       } else if (nowBand.key === bands.worst.key) {
-        blocks.sort((a, b) => avgOf(b) - avgOf(a));
+        actBlocks.sort((a, b) => avgOf(b) - avgOf(a));
         orderNote = `Your focus usually dips ${nowBand.label}, so the plan starts with what you focus on best.`;
       }
+    }
+
+    const blocks = [...projectBlocks, ...actBlocks];
+    if (!blocks.length) {
+      recBox.innerHTML = `<p class="rec-reason">Couldn't build a plan — add activities or a project.</p>`;
+      return;
     }
 
     const headline = document.createElement('div');
@@ -1322,16 +1515,18 @@
 
     const reason = document.createElement('p');
     reason.className = 'rec-reason';
-    reason.textContent = blocks.length === 1
-      ? 'One activity is far enough behind that it deserves the whole block.'
-      : 'Start with what is furthest behind; the sizes bring everything toward its target.';
+    reason.textContent = projectBlocks.length
+      ? 'Deadline work comes off the top; the rest brings your activities toward their targets.'
+      : blocks.length === 1
+        ? 'One activity is far enough behind that it deserves the whole block.'
+        : 'Start with what is furthest behind; the sizes bring everything toward its target.';
 
     const planBar = document.createElement('div');
     planBar.className = 'plan-bar';
     blocks.forEach(b => {
       const seg = document.createElement('div');
       seg.style.flexGrow = b.minutes;
-      seg.style.background = colorOf(b.activity);
+      seg.style.background = colorFor(b.activity);
       attachTooltip(seg, () => `${b.activity.name} — ${fmtDuration(b.minutes)}`);
       planBar.appendChild(seg);
     });
@@ -1342,7 +1537,7 @@
       const li = document.createElement('li');
       const sw = document.createElement('span');
       sw.className = 'swatch';
-      sw.style.background = colorOf(b.activity);
+      sw.style.background = colorFor(b.activity);
       const name = document.createElement('span');
       name.className = 'plan-name';
       name.textContent = b.activity.name;
@@ -1397,7 +1592,53 @@
     return btn;
   }
 
+  // A deadline project that hasn't met today's pace outranks activities.
+  function projectClaims(up) {
+    return up && (state.activities.length === 0 || todayLoggedFor(up.p.id) < up.pace);
+  }
+
+  function renderProjectRecommendation(up, minutes) {
+    const { p, pace, rem, overdue } = up;
+
+    const headline = document.createElement('div');
+    headline.className = 'rec-headline';
+    const sw = document.createElement('span');
+    sw.className = 'rec-swatch';
+    sw.style.background = 'var(--accent)';
+    headline.append(sw, document.createTextNode(p.name));
+
+    const reason = document.createElement('p');
+    reason.className = 'rec-reason';
+    reason.textContent = overdue
+      ? `This project is overdue — ${fmtDuration(rem)} still needed. Clear it before anything else.`
+      : `Deadline first: it needs about ${fmtDuration(pace)} per day to finish on time (${fmtDuration(rem)} to go, ${dueText(p)}).`;
+
+    const duration = document.createElement('p');
+    duration.className = 'rec-duration';
+    duration.innerHTML = `Suggested: about <strong>${fmtDuration(minutes)}</strong> on it now.`;
+
+    const actions = document.createElement('div');
+    actions.className = 'rec-actions';
+    actions.append(
+      makeStartTimerButton(p),
+      makeLogButton([{ activity: p, minutes }], `Log ${fmtDuration(minutes)} now`)
+    );
+
+    recBox.append(headline, reason, duration, actions);
+  }
+
   function renderOpenRecommendation() {
+    const up = urgentProject();
+    if (projectClaims(up)) {
+      const sug = Math.min(up.rem, Math.max(15, Math.min(180, Math.round(up.pace - todayLoggedFor(up.p.id)))));
+      renderProjectRecommendation(up, sug);
+      return;
+    }
+    if (state.activities.length === 0) {
+      recBox.innerHTML = `<p class="rec-reason">Your projects are on pace for today — enjoy some free time, or add activities to split it.</p>`;
+      return;
+    }
+
     const rec = recommend();
     const { totalMins } = computeStats();
     const act = rec.activity;
@@ -1798,6 +2039,27 @@
     addActivity(name);
     newName.value = '';
     newName.focus();
+  });
+
+  projectForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const name = projName.value.trim();
+    const hours = parseFloat(projHours.value);
+    const days = parseInt(projDays.value, 10);
+    if (!name || !(hours > 0) || !(days >= 1)) return;
+    state.projects.push({
+      id: uid(),
+      name,
+      neededMinutes: Math.round(hours * 60),
+      deadline: Date.now() + days * 86400000,
+      createdAt: Date.now(),
+    });
+    save();
+    render();
+    projName.value = '';
+    projHours.value = '';
+    projDays.value = '';
+    showToast(`Project added — about ${fmtDuration(Math.round(hours * 60 / days))}/day to finish in time.`);
   });
 
   logForm.addEventListener('submit', e => {
