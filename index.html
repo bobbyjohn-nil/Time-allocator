@@ -9,18 +9,19 @@
 </head>
 <body>
   <header class="site-header">
-    <h1>⧗ Time Allocator</h1>
+    <h1>Time Allocator</h1>
     <p class="tagline">Tell it how you want to split your free time — it tells you what to do next.</p>
   </header>
 
   <nav class="page-tabs" aria-label="Pages">
-    <button type="button" class="tab-btn active" data-page="home">Home</button>
+    <button type="button" class="tab-btn active" data-page="ask">What should I do?</button>
+    <button type="button" class="tab-btn" data-page="home">Dashboard</button>
     <button type="button" class="tab-btn" data-page="history">History</button>
     <button type="button" class="tab-btn" data-page="achievements">Achievements</button>
   </nav>
 
   <main>
-    <div id="page-home" class="page">
+    <div id="page-ask" class="page">
     <!-- ============ RECOMMENDATION ============ -->
     <section class="card hero-card" id="recommend-section">
       <div class="hero-inner">
@@ -55,7 +56,9 @@
       </div>
       <p class="hint">Start the timer when you begin an activity; stopping it logs the time automatically.</p>
     </section>
+    </div>
 
+    <div id="page-home" class="page" hidden>
     <!-- ============ BALANCE ============ -->
     <section class="card" id="balance-section">
       <div class="section-head">
@@ -131,6 +134,11 @@
         <p id="history-summary" class="hint"></p>
         <ul id="history-list" class="history-list"></ul>
         <p id="history-empty" class="hint">No sessions logged yet.</p>
+      </section>
+      <section class="card" id="archive-section">
+        <h2>Completed projects</h2>
+        <ul id="archive-list" class="history-list"></ul>
+        <p id="archive-empty" class="hint">Nothing finished yet — completed projects land here.</p>
       </section>
     </div>
 

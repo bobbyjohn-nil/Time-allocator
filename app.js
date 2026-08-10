@@ -778,6 +778,8 @@
   const historyList = $('history-list');
   const historyEmpty = $('history-empty');
   const historySummary = $('history-summary');
+  const archiveList = $('archive-list');
+  const archiveEmpty = $('archive-empty');
   const achGrid = $('ach-grid');
   const achSummary = $('ach-summary');
   const focusBest = $('focus-best');
@@ -796,9 +798,59 @@
     renderSelects();
     renderBalance();
     renderHistory();
+    renderArchive();
     renderInsights();
     checkAchievements(false);
     renderAchievements();
+  }
+
+  function renderArchive() {
+    archiveList.innerHTML = '';
+    const done = state.projects.filter(p => projectRemaining(p) <= 0);
+    archiveEmpty.style.display = done.length ? 'none' : '';
+
+    done
+      .map(p => ({
+        p,
+        finishedAt: state.sessions
+          .filter(s => s.activityId === p.id)
+          .reduce((a, s) => Math.max(a, s.timestamp), p.createdAt),
+      }))
+      .sort((a, b) => b.finishedAt - a.finishedAt)
+      .forEach(({ p, finishedAt }) => {
+        const li = document.createElement('li');
+        li.className = 'history-item';
+
+        const sw = document.createElement('span');
+        sw.className = 'swatch';
+        sw.style.background = 'var(--good)';
+
+        const name = document.createElement('span');
+        name.textContent = p.name;
+
+        const mins = document.createElement('span');
+        mins.className = 'history-mins';
+        mins.textContent = `${fmtDuration(projectLogged(p))} logged`;
+
+        const when = document.createElement('span');
+        when.className = 'history-when';
+        when.textContent = `finished ${new Date(finishedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
+
+        const del = document.createElement('button');
+        del.className = 'icon-btn danger';
+        del.title = `Delete ${p.name}`;
+        del.textContent = '✕';
+        del.addEventListener('click', async () => {
+          if (!(await themedConfirm(`Delete the archived project "${p.name}" and its sessions?`, { title: 'Delete project', confirmLabel: 'Delete', danger: true }))) return;
+          state.projects = state.projects.filter(x => x.id !== p.id);
+          state.sessions = state.sessions.filter(s => s.activityId !== p.id);
+          save();
+          render();
+        });
+
+        li.append(sw, name, mins, when, del);
+        archiveList.appendChild(li);
+      });
   }
 
   function renderInsights() {
@@ -1100,21 +1152,24 @@
 
   function renderProjects() {
     projectList.innerHTML = '';
-    if (state.projects.length === 0) {
+    const active = state.projects.filter(p => projectRemaining(p) > 0);
+    if (active.length === 0) {
       const p = document.createElement('p');
       p.className = 'hint';
-      p.textContent = 'No projects right now.';
+      p.textContent = state.projects.length
+        ? 'All projects finished — see the archive in the History tab.'
+        : 'No projects right now.';
       projectList.appendChild(p);
       return;
     }
 
-    [...state.projects]
+    active
       .sort((a, b) => a.deadline - b.deadline)
       .forEach(proj => {
         const logged = projectLogged(proj);
         const rem = projectRemaining(proj);
-        const done = rem <= 0;
-        const overdue = !done && projectDaysLeft(proj) <= 0;
+        const done = false;
+        const overdue = projectDaysLeft(proj) <= 0;
 
         const row = document.createElement('div');
         row.className = 'project-row';
@@ -1236,8 +1291,9 @@
       if (totalMins === 0) {
         values.textContent = `target ${targetPct}%`;
       } else {
+        // A couple of points off is noise, not a deficit.
         const diff = actualPct - targetPct;
-        const status = diff >= 0 ? `<span class="ahead">on track</span>` : `${targetPct - actualPct}pt behind`;
+        const status = diff >= -2 ? `<span class="ahead">on track</span>` : `${targetPct - actualPct}pt behind`;
         values.innerHTML = `${actualPct}% of ${targetPct}% · ${status}`;
       }
 
@@ -1374,11 +1430,11 @@
 
   // ---------- Pages ----------
 
-  const PAGES = ['home', 'history', 'achievements'];
+  const PAGES = ['ask', 'home', 'history', 'achievements'];
 
   function pageFromHash() {
     const h = location.hash.slice(1);
-    return PAGES.includes(h) ? h : 'home';
+    return PAGES.includes(h) && h !== 'ask' ? h : 'ask';
   }
 
   function showPage(page) {
@@ -1424,7 +1480,11 @@
         return;
       }
       if (state.activities.length === 0) {
-        recBox.innerHTML = `<p class="rec-reason">Your projects are on pace for today — enjoy the ${fmtDuration(X)}, or add activities to split it.</p>`;
+        if (up) {
+          renderProjectAhead(up, Math.min(X, up.rem));
+          return;
+        }
+        recBox.innerHTML = `<p class="rec-reason">Add some activities or a project first, then ask again!</p>`;
         return;
       }
       const rec = recommend();
@@ -1481,6 +1541,26 @@
           left -= need;
         }
       });
+
+    // With no regular activities to fall back to, leftover time works
+    // ahead on the projects themselves.
+    if (left > 0 && state.activities.length === 0) {
+      state.projects
+        .filter(p => projectRemaining(p) > 0)
+        .map(p => ({ p, pace: projectPace(p) }))
+        .sort((a, b) => b.pace - a.pace)
+        .forEach(({ p }) => {
+          if (left <= 0) return;
+          const already = projectBlocks.find(b => b.activity === p);
+          const cap = projectRemaining(p) - (already ? already.minutes : 0);
+          const take = Math.min(left, cap);
+          if (take >= 10) {
+            if (already) already.minutes += take;
+            else projectBlocks.push({ activity: p, minutes: take });
+            left -= take;
+          }
+        });
+    }
 
     const actBlocks = left > 0 && state.activities.length ? planAllocation(left) : [];
 
@@ -1594,7 +1674,7 @@
 
   // A deadline project that hasn't met today's pace outranks activities.
   function projectClaims(up) {
-    return up && (state.activities.length === 0 || todayLoggedFor(up.p.id) < up.pace);
+    return up && todayLoggedFor(up.p.id) < up.pace;
   }
 
   function renderProjectRecommendation(up, minutes) {
@@ -1627,6 +1707,36 @@
     recBox.append(headline, reason, duration, actions);
   }
 
+  // A project that has met today's pace is still a normal suggestion —
+  // working ahead, just without deadline urgency.
+  function renderProjectAhead(up, minutes) {
+    const { p, rem } = up;
+
+    const headline = document.createElement('div');
+    headline.className = 'rec-headline';
+    const sw = document.createElement('span');
+    sw.className = 'rec-swatch';
+    sw.style.background = 'var(--accent)';
+    headline.append(sw, document.createTextNode(p.name));
+
+    const reason = document.createElement('p');
+    reason.className = 'rec-reason';
+    reason.textContent = `You're on pace for today — get ahead while you can: ${fmtDuration(rem)} to go, ${dueText(p)}.`;
+
+    const duration = document.createElement('p');
+    duration.className = 'rec-duration';
+    duration.innerHTML = `Suggested: about <strong>${fmtDuration(minutes)}</strong> on it.`;
+
+    const actions = document.createElement('div');
+    actions.className = 'rec-actions';
+    actions.append(
+      makeStartTimerButton(p),
+      makeLogButton([{ activity: p, minutes }], `Log ${fmtDuration(minutes)} now`)
+    );
+
+    recBox.append(headline, reason, duration, actions);
+  }
+
   function renderOpenRecommendation() {
     const up = urgentProject();
     if (projectClaims(up)) {
@@ -1635,7 +1745,11 @@
       return;
     }
     if (state.activities.length === 0) {
-      recBox.innerHTML = `<p class="rec-reason">Your projects are on pace for today — enjoy some free time, or add activities to split it.</p>`;
+      if (up) {
+        renderProjectAhead(up, Math.min(up.rem, 60));
+        return;
+      }
+      recBox.innerHTML = `<p class="rec-reason">Add some activities or a project first, then ask again!</p>`;
       return;
     }
 
